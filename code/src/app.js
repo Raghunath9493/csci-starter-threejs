@@ -7,6 +7,10 @@ let _lastFrameTime;
 // A flag to indicate if the init() function has been called.
 let _hasInited = false;
 
+const _input = {
+  keys: new Set(),
+};
+
 // The render loop. This is where all the magic happens.
 const loop = (time) => {
   if (!_lastFrameTime) {
@@ -34,7 +38,7 @@ const loop = (time) => {
 
   // Call the loop() function every frame.
   if (window.loop) {
-    window.loop(dt, _canvas);
+    window.loop(dt, _canvas, _input);
   }
 
   window.requestAnimationFrame(loop);
@@ -70,6 +74,16 @@ window.loadShader = async ({ gl, name, type }) => {
 window.onload = () => {
   // get the <canvas /> DOM element
   _canvas = document.getElementById('canvas');
+
+  // add handlers
+  document.addEventListener('keydown', (event) => {
+    const key = event.key;
+    _input.keys.add(key);
+  });
+  document.addEventListener('keyup', (event) => {
+    const key = event.key;
+    _input.keys.delete(key);
+  });
 
   // attach the solution script
   attachScript();

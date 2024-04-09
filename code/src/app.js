@@ -45,8 +45,8 @@ const attachScript = () => {
   const url = `./src/solution.js`;
   const scriptTag = document.createElement('script');
   scriptTag.src = url;
+  scriptTag.type = 'module';
   document.head.appendChild(scriptTag);
-  document.title = `Assignment Solution`;
 };
 
 window.loadShader = async ({ gl, name, type }) => {

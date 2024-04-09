@@ -1,8 +1,11 @@
+import * as THREE from 'three';
 
 window.init = async (canvas) => {
-  // Called once.
+  const scene = new THREE.Scene();
+  
+  console.log('made a scene', scene);
 };
 
 window.loop = (dt, canvas) => {
-  // Called every frame.
+  
 };

@@ -1,55 +1,247 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-let renderer, scene, camera;
+let renderer, scene, camera, tennis_ball;
+
+// // Define variables to track camera movement
+// let cameraPosition = new THREE.Vector3(0, 5, 10); // Initial camera position
+// let cameraRotation = new THREE.Vector3(0, 0, 0); // Initial camera rotation
+
+// Define variables for ball movement
+let ballPosition = new THREE.Vector3(0, 1, 0); // Initial ball position
+const ballMoveSpeed = 0.9; // Speed of ball movement
+const ballRotationSpeed = 0.5; // Speed of ball rotation
+
+// Define the camera position
+const cameraPosition = new THREE.Vector3(20, 25, 25); // Adjust the values as needed
+
+// Define the camera's target (where it's looki ng at)
+const cameraTarget = ballPosition.clone(); // Assuming ballPosition is defined elsewhere
+
+// Define the camera rotation
+const cameraRotation = new THREE.Euler(); // Initialize with default values (0, 0, 0)
+
+
+// Define variables to control camera movement speed and rotation speed
+const cameraMoveSpeed = 0.3;
+const cameraRotationSpeed = 0.01;
+
+
 
 const load = (url) => new Promise((resolve, reject) => {
-  const loader = new GLTFLoader();
-  loader.load(url, (gltf) => resolve(gltf.scene), undefined, reject);
+    const loader = new GLTFLoader();
+    loader.load(url, (gltf) => resolve(gltf.scene), undefined, reject);
 });
 
-window.init = async () => {
-  renderer = new THREE.WebGLRenderer();
-  renderer.setSize( window.innerWidth, window.innerHeight );
-  document.body.appendChild( renderer.domElement );
+window.init = async() => {
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-  scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
-  camera.position.set(5, 5, 5);
-  camera.lookAt(0, 0, 0);
+    scene = new THREE.Scene();
+    // Create the camera
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    // Position the camera at the top right
+    camera.position.copy(cameraPosition);
+    camera.position.set(0, 0, 0);
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 10);
-  scene.add(directionalLight);
-  const helper = new THREE.DirectionalLightHelper( directionalLight, 5 );
-  scene.add( helper );
+    // Set the camera's target to focus on the ball
+    camera.lookAt(ballPosition);
 
-  const geometry = new THREE.PlaneGeometry( 1, 1 );
-  const texture = new THREE.TextureLoader().load('./assets/rocks.jpg' ); 
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set( 50, 50 );
-  const material = new THREE.MeshBasicMaterial({
-    map: texture,
-  });
-  const plane = new THREE.Mesh( geometry, material );
-  plane.rotateX(-Math.PI / 2);
-  plane.scale.set(100, 100, 100);
-  //scene.add( plane );
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 10);
+    scene.add(directionalLight);
+    const helper = new THREE.DirectionalLightHelper(directionalLight, 5);
+    scene.add(helper);
 
-  const gridHelper = new THREE.GridHelper( 10, 10 );
-  scene.add( gridHelper );
+    const texture = new THREE.TextureLoader().load('./assets/rocks.jpg');
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(100, 100);
+    const material = new THREE.MeshBasicMaterial({
+        map: texture,
+    });
+    const geometry = new THREE.PlaneGeometry(1000, 1000); // Adjust the size as needed
+    const floor = new THREE.Mesh(geometry, material);
+    floor.rotateX(-Math.PI / 2);
+    floor.position.set(0, -1, 0);
+    scene.add(floor);
 
-  const axesHelper = new THREE.AxesHelper( 5 );
-  scene.add( axesHelper );
+    // const gridHelper = new THREE.GridHelper(10, 10);
+    // scene.add(gridHelper);
 
-  const porsche = await load('./assets/porsche/scene.gltf');
-  scene.add(porsche);
+    // const axesHelper = new THREE.AxesHelper(5);
+    // scene.add(axesHelper);
 
-  console.log('made a scene', porsche);
+    // Load the Ball model
+    tennis_ball = await load('./assets/tennis_ball/scene.gltf');
+    scene.add(tennis_ball);
+
+    // Set the initial position of the ball
+    tennis_ball.position.copy(ballPosition);
+
+    // Set the camera position and rotation to be inside the room
+    camera.position.set(0, 5, 0); // Adjust the position to be inside the room
+    camera.rotation.set(0, Math.PI, 0); // Adjust the rotation to face the interior of the room
 };
 
-let speed = [0, 0, 0];
+
+// Add event listeners for mouse and keyboard inputs
+document.addEventListener('keydown', handleKeyDown);
+// document.addEventListener('mousemove', handleMouseMove);
+
+// Function to rotate the ball left
+function rotateBallLeft() {
+    if (tennis_ball) {
+        tennis_ball.rotation.y += ballRotationSpeed;
+    }
+}
+
+// Function to rotate the ball right
+function rotateBallRight() {
+    if (tennis_ball) {
+        tennis_ball.rotation.y -= ballRotationSpeed;
+    }
+}
+
+// Function to move the ball forward
+function moveBallForward() {
+    ballPosition.add(new THREE.Vector3(0, 0, -ballMoveSpeed));
+}
+
+// Function to move the ball backward
+function moveBallBackward() {
+    ballPosition.add(new THREE.Vector3(0, 0, ballMoveSpeed));
+}
+
+// Function to move the ball left
+function moveBallLeft() {
+    ballPosition.add(new THREE.Vector3(-ballMoveSpeed, 0, 0));
+}
+
+// Function to move the ball right
+function moveBallRight() {
+    ballPosition.add(new THREE.Vector3(ballMoveSpeed, 0, 0));
+}
+// Function to handle keyboard input
+function handleKeyDown(event) {
+    const key = event.key.toLowerCase();
+    switch (key) {
+        case 'w': // Move camera forward
+            moveBallForward();
+            break;
+        case 'arrowup': // Move ball forward
+            moveBallForward();
+            break;
+        case 's': // Move camera backward
+            moveBallBackward();
+            break;
+        case 'arrowdown': // Move ball backward
+            moveBallBackward();
+            break;
+        case 'a': // Rotate camera left
+            moveBallLeft();
+            break;
+        case 'arrowleft': // Move ball left
+            moveBallLeft();
+            break;
+        case 'd': // Rotate camera right
+            moveBallRight();
+            break;
+        case 'arrowright': // Move ball right
+            moveBallRight();
+            break;
+        case 'q': // Rotate camera up
+            rotateBallLeft();
+            break;
+        case 'e': // Rotate camera down
+            rotateBallRight();
+            break;
+            // Add more cases for additional controls as needed
+    }
+}
+// Function to update ball position and rotation
+function updateBallPosition() {
+    // Check if tennis_ball is defined
+    if (tennis_ball) {
+        // Update ball position
+        tennis_ball.position.copy(ballPosition);
+
+        // Rotate the ball around its own axis
+        tennis_ball.rotation.y += ballRotationSpeed;
+    }
+}
+
+
+// Call updateBallPosition() in your render loop
 window.loop = (dt, input) => {
-  renderer.render( scene, camera );
-};
+    // Update ball position
+    updateBallPosition();
+    // Function to handle mouse movement
+    function handleMouseMove(event) {
+        // Update camera rotation based on mouse movement
+        cameraRotation.y -= event.movementX * cameraRotationSpeed;
+        cameraRotation.x -= event.movementY * cameraRotationSpeed;
+    }
 
+    // Function to move the camera forward
+    function moveCameraForward() {
+        cameraPosition.add(new THREE.Vector3(0, 0, -cameraMoveSpeed).applyEuler(cameraRotation));
+    }
+
+    // Function to move the camera backward
+    function moveCameraBackward() {
+        cameraPosition.add(new THREE.Vector3(0, 0, cameraMoveSpeed).applyEuler(cameraRotation));
+    }
+
+    // Function to rotate the camera left
+    function rotateCameraLeft() {
+        cameraRotation.y -= cameraRotationSpeed;
+    }
+
+    // Function to rotate the camera right
+    function rotateCameraRight() {
+        cameraRotation.y += cameraRotationSpeed;
+    }
+
+    // Function to rotate the camera up
+    function rotateCameraUp() {
+        cameraRotation.x -= cameraRotationSpeed;
+    }
+
+    // Function to rotate the camera down
+    function rotateCameraDown() {
+        cameraRotation.x += cameraRotationSpeed;
+    }
+
+    // Function to update camera position and rotation
+    function updateCamera() {
+        // Calculate the direction vector from the ball to the camera
+        const direction = new THREE.Vector3(0, 0, 1); // Assuming camera is initially positioned behind the ball
+        direction.applyEuler(cameraRotation); // Apply the camera's rotation
+
+        // Set the camera position to be behind and above the ball
+        const distance = 15; // Distance from the ball
+        const height = 30; // Height above the ball
+        const cameraOffset = direction.clone().multiplyScalar(distance).add(ballPosition).setY(ballPosition.y + height);
+
+        // Update the camera position
+        camera.position.copy(cameraOffset);
+
+        // Point the camera towards the ball
+        camera.lookAt(ballPosition);
+    }
+
+
+    // Call updateBallPosition() in your render loop
+    window.loop = (dt, input) => {
+        // Update ball position
+        updateBallPosition();
+
+        // Update camera position and rotation
+        updateCamera();
+
+        // Render the scene
+        renderer.render(scene, camera);
+    }
+
+};

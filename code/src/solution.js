@@ -53,7 +53,7 @@ window.init = async() => {
     const helper = new THREE.DirectionalLightHelper(directionalLight, 5);
     scene.add(helper);
 
-    const texture = new THREE.TextureLoader().load('./assets/rocks.jpg');
+    const texture = new THREE.TextureLoader().load('./assets/Grass.jpg');
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(100, 100);
@@ -63,7 +63,7 @@ window.init = async() => {
     const geometry = new THREE.PlaneGeometry(1000, 1000); // Adjust the size as needed
     const floor = new THREE.Mesh(geometry, material);
     floor.rotateX(-Math.PI / 2);
-    floor.position.set(0, -1, 0);
+    floor.position.set(0, 0, 0);
     scene.add(floor);
 
     // const gridHelper = new THREE.GridHelper(10, 10);
@@ -126,50 +126,50 @@ function moveBallRight() {
 function handleKeyDown(event) {
     const key = event.key.toLowerCase();
     switch (key) {
-        case 'w': // Move camera forward
+        case 'w': // Move ball forward
+        case 'arrowup':
             moveBallForward();
             break;
-        case 'arrowup': // Move ball forward
-            moveBallForward();
-            break;
-        case 's': // Move camera backward
+        case 's': // Move ball backward
+        case 'arrowdown':
             moveBallBackward();
             break;
-        case 'arrowdown': // Move ball backward
-            moveBallBackward();
-            break;
-        case 'a': // Rotate camera left
+        case 'a': // Move ball left
+        case 'arrowleft':
             moveBallLeft();
             break;
-        case 'arrowleft': // Move ball left
-            moveBallLeft();
-            break;
-        case 'd': // Rotate camera right
+        case 'd': // Move ball right
+        case 'arrowright':
             moveBallRight();
             break;
-        case 'arrowright': // Move ball right
-            moveBallRight();
-            break;
-        case 'q': // Rotate camera up
+        case 'q': // Rotate ball left
             rotateBallLeft();
             break;
-        case 'e': // Rotate camera down
+        case 'e': // Rotate ball right
             rotateBallRight();
             break;
             // Add more cases for additional controls as needed
     }
 }
+
 // Function to update ball position and rotation
 function updateBallPosition() {
     // Check if tennis_ball is defined
     if (tennis_ball) {
+        // Calculate the direction of movement based on the change in ball position
+        const movementDirection = ballPosition.clone().sub(tennis_ball.position).normalize();
+
+        // Calculate the angle between the current rotation and the movement direction
+        const angle = Math.atan2(movementDirection.x, movementDirection.z);
+
+        // Set the rotation of the ball to match the movement direction
+        tennis_ball.rotation.y = angle;
+
         // Update ball position
         tennis_ball.position.copy(ballPosition);
-
-        // Rotate the ball around its own axis
-        tennis_ball.rotation.y += ballRotationSpeed;
     }
 }
+
 
 
 // Call updateBallPosition() in your render loop

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-let renderer, scene, camera, tennis_ball;
+let renderer, scene, camera, worn_baseball_ball;
 
 // // Define variables to track camera movement
 // let cameraPosition = new THREE.Vector3(0, 5, 10); // Initial camera position
@@ -73,11 +73,11 @@ window.init = async() => {
     // scene.add(axesHelper);
 
     // Load the Ball model
-    tennis_ball = await load('./assets/tennis_ball/scene.gltf');
-    scene.add(tennis_ball);
+    worn_baseball_ball = await load('./assets/worn_baseball_ball/scene.gltf');
+    scene.add(worn_baseball_ball);
 
     // Set the initial position of the ball
-    tennis_ball.position.copy(ballPosition);
+    worn_baseball_ball.position.copy(ballPosition);
 
     // Set the camera position and rotation to be inside the room
     camera.position.set(0, 5, 0); // Adjust the position to be inside the room
@@ -91,15 +91,15 @@ document.addEventListener('keydown', handleKeyDown);
 
 // Function to rotate the ball left
 function rotateBallLeft() {
-    if (tennis_ball) {
-        tennis_ball.rotation.y += ballRotationSpeed;
+    if (worn_baseball_ball) {
+        worn_baseball_ball.rotation.y += ballRotationSpeed;
     }
 }
 
 // Function to rotate the ball right
 function rotateBallRight() {
-    if (tennis_ball) {
-        tennis_ball.rotation.y -= ballRotationSpeed;
+    if (worn_baseball_ball) {
+        worn_baseball_ball.rotation.y -= ballRotationSpeed;
     }
 }
 
@@ -154,19 +154,19 @@ function handleKeyDown(event) {
 
 // Function to update ball position and rotation
 function updateBallPosition() {
-    // Check if tennis_ball is defined
-    if (tennis_ball) {
+    // Check if worn_baseball_ball is defined
+    if (worn_baseball_ball) {
         // Calculate the direction of movement based on the change in ball position
-        const movementDirection = ballPosition.clone().sub(tennis_ball.position).normalize();
+        const movementDirection = ballPosition.clone().sub(worn_baseball_ball.position).normalize();
 
         // Calculate the angle between the current rotation and the movement direction
         const angle = Math.atan2(movementDirection.x, movementDirection.z);
 
         // Set the rotation of the ball to match the movement direction
-        tennis_ball.rotation.y = angle;
+        worn_baseball_ball.rotation.y = angle;
 
         // Update ball position
-        tennis_ball.position.copy(ballPosition);
+        worn_baseball_ball.position.copy(ballPosition);
     }
 }
 

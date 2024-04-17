@@ -1,7 +1,15 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-let renderer, scene, camera, worn_baseball_ball;
+let renderer, scene, camera, Soccer_ball;
+
+// Define boolean flags to track which keys are currently pressed
+let keys = {
+    'w': false,
+    'a': false,
+    's': false,
+    'd': false
+};
 
 // // Define variables to track camera movement
 // let cameraPosition = new THREE.Vector3(0, 5, 10); // Initial camera position
@@ -73,11 +81,12 @@ window.init = async() => {
     // scene.add(axesHelper);
 
     // Load the Ball model
-    worn_baseball_ball = await load('./assets/worn_baseball_ball/scene.gltf');
-    scene.add(worn_baseball_ball);
+    Soccer_ball = await load('./assets/Soccer_ball/scene.gltf');
+    scene.add(Soccer_ball);
+    Soccer_ball.scale.set(10, 10, 10);
 
     // Set the initial position of the ball
-    worn_baseball_ball.position.copy(ballPosition);
+    Soccer_ball.position.copy(ballPosition);
 
     // Set the camera position and rotation to be inside the room
     camera.position.set(0, 5, 0); // Adjust the position to be inside the room
@@ -91,37 +100,48 @@ document.addEventListener('keydown', handleKeyDown);
 
 // Function to rotate the ball left
 function rotateBallLeft() {
-    if (worn_baseball_ball) {
-        worn_baseball_ball.rotation.y += ballRotationSpeed;
+    if (Soccer_ball) {
+        Soccer_ball.rotation.y += ballRotationSpeed;
     }
 }
 
 // Function to rotate the ball right
 function rotateBallRight() {
-    if (worn_baseball_ball) {
-        worn_baseball_ball.rotation.y -= ballRotationSpeed;
+    if (Soccer_ball) {
+        Soccer_ball.rotation.y -= ballRotationSpeed;
     }
 }
 
 // Function to move the ball forward
 function moveBallForward() {
-    ballPosition.add(new THREE.Vector3(0, 0, -ballMoveSpeed));
+    const movementVector = new THREE.Vector3(0, 0, -ballMoveSpeed);
+    ballPosition.add(movementVector);
+    Soccer_ball.rotation.x -= ballRotationSpeed;
 }
 
 // Function to move the ball backward
 function moveBallBackward() {
-    ballPosition.add(new THREE.Vector3(0, 0, ballMoveSpeed));
+    const movementVector = new THREE.Vector3(0, 0, ballMoveSpeed);
+    ballPosition.add(movementVector);
+    Soccer_ball.rotation.x += ballRotationSpeed;
 }
 
 // Function to move the ball left
 function moveBallLeft() {
-    ballPosition.add(new THREE.Vector3(-ballMoveSpeed, 0, 0));
+    const movementVector = new THREE.Vector3(-ballMoveSpeed, 0, 0);
+    ballPosition.add(movementVector);
+    Soccer_ball.rotation.z -= ballRotationSpeed;
 }
 
 // Function to move the ball right
 function moveBallRight() {
-    ballPosition.add(new THREE.Vector3(ballMoveSpeed, 0, 0));
+    const movementVector = new THREE.Vector3(ballMoveSpeed, 0, 0);
+    ballPosition.add(movementVector);
+    Soccer_ball.rotation.z += ballRotationSpeed;
 }
+
+
+
 // Function to handle keyboard input
 function handleKeyDown(event) {
     const key = event.key.toLowerCase();
@@ -154,22 +174,14 @@ function handleKeyDown(event) {
 
 // Function to update ball position and rotation
 function updateBallPosition() {
-    // Check if worn_baseball_ball is defined
-    if (worn_baseball_ball) {
+    // Check if Soccer_ball is defined
+    if (Soccer_ball) {
         // Calculate the direction of movement based on the change in ball position
-        const movementDirection = ballPosition.clone().sub(worn_baseball_ball.position).normalize();
-
-        // Calculate the angle between the current rotation and the movement direction
-        const angle = Math.atan2(movementDirection.x, movementDirection.z);
-
-        // Set the rotation of the ball to match the movement direction
-        worn_baseball_ball.rotation.y = angle;
-
+        const movementDirection = ballPosition.clone().sub(Soccer_ball.position).normalize();
         // Update ball position
-        worn_baseball_ball.position.copy(ballPosition);
+        Soccer_ball.position.copy(ballPosition);
     }
 }
-
 
 
 // Call updateBallPosition() in your render loop

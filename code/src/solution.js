@@ -2,19 +2,6 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 let renderer, scene, camera, Soccer_ball;
-
-// Define boolean flags to track which keys are currently pressed
-let keys = {
-    'w': false,
-    'a': false,
-    's': false,
-    'd': false
-};
-
-// // Define variables to track camera movement
-// let cameraPosition = new THREE.Vector3(0, 5, 10); // Initial camera position
-// let cameraRotation = new THREE.Vector3(0, 0, 0); // Initial camera rotation
-
 // Define variables for ball movement
 let ballPosition = new THREE.Vector3(0, 1, 0); // Initial ball position
 const ballMoveSpeed = 0.9; // Speed of ball movement
@@ -40,6 +27,28 @@ const load = (url) => new Promise((resolve, reject) => {
     const loader = new GLTFLoader();
     loader.load(url, (gltf) => resolve(gltf.scene), undefined, reject);
 });
+
+// Function to add toys on the grass
+function addToys() {
+    // Define the toy geometry and material
+    const toyGeometry = new THREE.BoxGeometry(1, 1, 1); // Adjust the size as needed
+    const toyMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Adjust the color as needed
+
+    // Create multiple toys and position them randomly on the grass
+    const numToys = 10; // Number of toys to add 
+    for (let i = 0; i < numToys; i++) {
+        // Create a toy mesh
+        const toy = new THREE.Mesh(toyGeometry, toyMaterial);
+
+        // Set a random position on the grass
+        const posX = Math.random() * 100 - 50; // Random X position within the grass area
+        const posY = 0.5; // Height above the grass
+        const posZ = Math.random() * 100 - 50; // Random Z position within the grass area
+        toy.position.set(posX, posY, posZ);
+        // Add the toy to the scene
+        scene.add(toy);
+    }
+}
 
 window.init = async() => {
     renderer = new THREE.WebGLRenderer();
@@ -88,11 +97,43 @@ window.init = async() => {
     // Set the initial position of the ball
     Soccer_ball.position.copy(ballPosition);
 
+    // Add toys to the scene
+    addToys();
+
     // Set the camera position and rotation to be inside the room
     camera.position.set(0, 5, 0); // Adjust the position to be inside the room
     camera.rotation.set(0, Math.PI, 0); // Adjust the rotation to face the interior of the room
 };
 
+// Function to handle keyboard input
+function handleKeyDown(event) {
+    const key = event.key.toLowerCase();
+    switch (key) {
+        case 'w': // Move ball forward
+        case 'arrowup':
+            moveBallForward();
+            break;
+        case 's': // Move ball backward
+        case 'arrowdown':
+            moveBallBackward();
+            break;
+        case 'a': // Move ball left
+        case 'arrowleft':
+            moveBallLeft();
+            break;
+        case 'd': // Move ball right
+        case 'arrowright':
+            moveBallRight();
+            break;
+        case 'q': // Rotate ball left
+            rotateBallLeft();
+            break;
+        case 'e': // Rotate ball right
+            rotateBallRight();
+            break;
+            // Add more cases for additional controls as needed
+    }
+}
 
 // Add event listeners for mouse and keyboard inputs
 document.addEventListener('keydown', handleKeyDown);
@@ -140,38 +181,6 @@ function moveBallRight() {
     Soccer_ball.rotation.z += ballRotationSpeed;
 }
 
-
-
-// Function to handle keyboard input
-function handleKeyDown(event) {
-    const key = event.key.toLowerCase();
-    switch (key) {
-        case 'w': // Move ball forward
-        case 'arrowup':
-            moveBallForward();
-            break;
-        case 's': // Move ball backward
-        case 'arrowdown':
-            moveBallBackward();
-            break;
-        case 'a': // Move ball left
-        case 'arrowleft':
-            moveBallLeft();
-            break;
-        case 'd': // Move ball right
-        case 'arrowright':
-            moveBallRight();
-            break;
-        case 'q': // Rotate ball left
-            rotateBallLeft();
-            break;
-        case 'e': // Rotate ball right
-            rotateBallRight();
-            break;
-            // Add more cases for additional controls as needed
-    }
-}
-
 // Function to update ball position and rotation
 function updateBallPosition() {
     // Check if Soccer_ball is defined
@@ -182,8 +191,6 @@ function updateBallPosition() {
         Soccer_ball.position.copy(ballPosition);
     }
 }
-
-
 // Call updateBallPosition() in your render loop
 window.loop = (dt, input) => {
     // Update ball position

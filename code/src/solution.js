@@ -1,12 +1,15 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 let renderer, scene, camera, Soccer_ball;
+let toysTouchedCount = 0; // Initialize counter for toys touched by the ball
+let monstersTouchedCount = 0; // Initialize counter for monsters touched by the ball
+
 // Define variables for ball movement
 let ballPosition = new THREE.Vector3(0, 1, 0); // Initial ball position
 const ballMoveSpeed = 0.9; // Speed of ball movement
 const ballRotationSpeed = 0.5; // Speed of ball rotation
 // Define the camera position
-const cameraPosition = new THREE.Vector3(2, 2, 2); // Adjust the values as needed
+const cameraPosition = new THREE.Vector3(0, 0, 0); // Adjust the values as needed
 // Define the camera's target (where it's looki ng at)
 const cameraTarget = ballPosition.clone(); // Assuming ballPosition is defined elsewhere
 // Define the camera rotation
@@ -39,36 +42,52 @@ function addToys() {
 }
 // Function to detect collision between the ball and toys
 function detectCollision() {
-    const toys = scene.children.filter(child => child !== Soccer_ball && child instanceof THREE.Mesh);
-    const collisionDistance = 2; // Adjust the collision distance as needed
-    for (const toy of toys) {
-        const distance = toy.position.distanceTo(Soccer_ball.position);
-        if (distance < collisionDistance && !toy.isAttached) {
+    const toysAndMonsters = scene.children.filter(child => (child !== Soccer_ball && (child instanceof THREE.Mesh || child instanceof THREE.Group)));
+    const collisionDistance = 0.2; // Adjust the collision distance as needed
+    for (const obj of toysAndMonsters) {
+        const distance = obj.position.distanceTo(Soccer_ball.position);
+        if (distance < collisionDistance && !obj.isAttached) {
             // Debugging: Log when a collision is detected
-            console.log('Collision detected!');
-            // Attach the toy to the ball
-            Soccer_ball.attach(toy);
+            console.log('Collision detected with', obj.name);
+            // Attach the object to the ball
+            Soccer_ball.attach(obj);
             // Set the custom property to indicate attachment
-            toy.isAttached = true;
-        } else if (distance >= collisionDistance && toy.isAttached) {
-            // Detach the toy from the ball if it moves away
-            Soccer_ball.remove(toy);
+            obj.isAttached = true;
+        } else if (distance >= collisionDistance && obj.isAttached) {
+            // Detach the object from the ball if it moves away
+            Soccer_ball.remove(obj);
             // Reset the attachment state
-            toy.isAttached = false;
+            obj.isAttached = false;
         }
     }
 }
-// Call detectCollision() in your render loop
+
+
+// Function to update ball scale and attached objects positions
+function updateBallScale() {
+    const scaleFactor = 5; // Adjust the scale factor as needed
+    Soccer_ball.scale.addScalar(scaleFactor);
+    const attachedObjects = Soccer_ball.children;
+    for (const obj of attachedObjects) {
+        // Update the position of the attached objects relative to the ball's new scale
+        obj.position.multiplyScalar(1 + scaleFactor);
+    }
+}
+
+// Call detectCollision() and updateBallScale() in your render loop
 window.loop = (dt, input) => {
     // Update ball position
     updateBallPosition();
     // Detect collision between the ball and toys
     detectCollision();
+    // Update ball scale and attached objects positions
+    updateBallScale();
     // Update camera position and rotation
     updateCamera();
     // Render the scene
     renderer.render(scene, camera);
 };
+
 window.init = async() => {
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -93,7 +112,8 @@ window.init = async() => {
     monsters.scale.set(2, 2, 2); // Increase the size by a factor of 2 in all dimensions
 
     // Repeat monsters on the grass
-    for (let i = 0; i < 10; i++) {
+    const numMonsters = 20; // Change the number of monsters here
+    for (let i = 0; i < numMonsters; i++) {
         const monsterInstance = monsters.clone();
         // Set a random position on the grass for each monster instance
         const posX = Math.random() * 100 - 50; // Random X position within the grass area
@@ -130,7 +150,39 @@ window.init = async() => {
     // Set the camera position and rotation to be inside the room
     // camera.position.set(0, 5, 0); // Adjust the position to be inside the room
     camera.rotation.set(0, Math.PI, 0); // Adjust the rotation to face the interior of the room
+    // Add event listener for window resize
+    window.addEventListener('resize', onWindowResize);
+
+    // Create HTML elements to display the counts
+    const toysCountElement = document.createElement('div');
+    toysCountElement.textContent = 'Toys: 0';
+    toysCountElement.style.position = 'absolute';
+    toysCountElement.style.top = '10px'; // Adjust the position as needed
+    toysCountElement.style.right = '10px'; // Adjust the position as needed
+    document.body.appendChild(toysCountElement);
+
+    const monstersCountElement = document.createElement('div');
+    monstersCountElement.textContent = 'Monsters: 0';
+    monstersCountElement.style.position = 'absolute';
+    monstersCountElement.style.top = '40px'; // Adjust the position as needed
+    monstersCountElement.style.right = '10px'; // Adjust the position as needed
+    document.body.appendChild(monstersCountElement);
+
+    // Function to update the counts displayed on the HTML elements
+    function updateCountsDisplay() {
+        toysCountElement.textContent = `Toys: ${toysTouchedCount}`;
+        monstersCountElement.textContent = `Monsters: ${monstersTouchedCount}`;
+    }
+
+
 };
+
+// Function to handle window resize
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
 
 // Function to handle keyboard input
 function handleKeyDown(event) {
@@ -158,11 +210,35 @@ function handleKeyDown(event) {
         case 'e': // Rotate ball right
             rotateBallRight();
             break;
+        case ' ': // Spacebar for ball bounce
+            bounceBall();
+            break;
             // Add more cases for additional controls as needed
     }
 }
 // Add event listeners for mouse and keyboard inputs
 document.addEventListener('keydown', handleKeyDown);
+
+// Function to handle ball bounce
+function bounceBall() {
+    const bounceHeight = 50; // Adjust the bounce height as needed
+    const bounceDuration = 500; // Adjust the duration of the bounce animation in milliseconds
+    const initialY = Soccer_ball.position.y;
+    const startTime = Date.now();
+
+    function update() {
+        const elapsedTime = Date.now() - startTime;
+        const progress = Math.min(elapsedTime / bounceDuration, 1);
+        const newY = initialY + bounceHeight * Math.sin(progress * Math.PI);
+        Soccer_ball.position.y = newY;
+
+        if (progress < 1) {
+            requestAnimationFrame(update);
+        }
+    }
+
+    update();
+}
 // Function to rotate the ball left
 function rotateBallLeft() {
     if (Soccer_ball) {
@@ -211,6 +287,8 @@ function updateBallPosition() {
 }
 // Call updateBallPosition() in your render loop
 window.loop = (dt, input) => {
+
+
     // Update ball position
     updateBallPosition();
     // Function to handle mouse movement
@@ -219,6 +297,7 @@ window.loop = (dt, input) => {
         cameraRotation.y -= event.movementX * cameraRotationSpeed;
         cameraRotation.x -= event.movementY * cameraRotationSpeed;
     }
+
     // Function to move the camera forward
     function moveCameraForward() {
         cameraPosition.add(new THREE.Vector3(0, 0, -cameraMoveSpeed).applyEuler(cameraRotation));
@@ -266,4 +345,5 @@ window.loop = (dt, input) => {
         // Render the scene
         renderer.render(scene, camera);
     }
+
 };

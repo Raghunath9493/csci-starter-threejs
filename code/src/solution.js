@@ -6,6 +6,7 @@ let keysPressed = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRig
 const ballMoveSpeed = 0.5; // Speed of ball movement
 const ballRotationSpeed = 0.1; // Speed of ball rotation
 const ballPosition = new THREE.Vector3(0, 3, 0);
+let toys = []; // To keep track of the toys in the scene
 
 const getRandomColor = () => {
     return Math.floor(Math.random() * 0xffffff);
@@ -37,9 +38,26 @@ const addToys = () => {
         const posZ = Math.random() * 100 - 50;
         toy.position.set(posX, posY, posZ);
         scene.add(toy); // Add toy to the scene
+        toys.push(toy); // Add to toys array
     }
 };
 
+const checkCollision = () => {
+    const ballBox = new THREE.Box3().setFromObject(Soccer_ball);
+    for (let i = toys.length - 1; i >= 0; i--) {
+        const toyBox = new THREE.Box3().setFromObject(toys[i]);
+        if (ballBox.intersectsBox(toyBox)) { // If collision occurs
+            const toyColor = toys[i].material.color.getHex(); // Get toy's color
+            Soccer_ball.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.color.set(toyColor); // Change ball's color
+                }
+            });
+            scene.remove(toys[i]); // Remove toy from scene
+            toys.splice(i, 1); // Remove from toys array
+        }
+    }
+};
 
 const updateBallPosition = () => {
     const moveVector = new THREE.Vector3(0, 0, 0);
@@ -168,9 +186,11 @@ const init = async() => {
 
     const renderLoop = () => {
         updateBallPosition();
+        checkCollision(); // Check for collisions with toys
         renderer.render(scene, camera);
         requestAnimationFrame(renderLoop);
     };
+
 
     renderLoop();
 };

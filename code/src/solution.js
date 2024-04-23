@@ -13,6 +13,7 @@ let toyCountElement; // To display the toy count
 let gameOverElement; // To display the game over title
 let timerSeconds = 60; // 60-second timer
 let timerInterval; // For updating the timer
+let gameEnded = false; // Game state to check if the game has ended
 
 const getRandomColor = () => {
     return Math.floor(Math.random() * 0xffffff);
@@ -121,10 +122,14 @@ const checkCollision = () => {
             updateToyCountDisplay();
         }
     }
+
+    // Check if all toys are collected
     if (toys.length === 0) {
-        showGameOver(); // Display Game Over if all toys are collected
+        gameEnded = true; // End the game
+        showGameOver();
     }
 };
+
 
 // Function to update the timer
 const updateTimerDisplay = () => {
@@ -136,6 +141,7 @@ const updateTimerDisplay = () => {
 // Function to show the game over title
 const showGameOver = () => {
     clearInterval(timerInterval);
+    gameEnded = true; // Set the game ended flag
     if (!gameOverElement) {
         gameOverElement = document.createElement("div");
         gameOverElement.style.position = "absolute";
@@ -154,13 +160,15 @@ const showGameOver = () => {
 const startTimer = () => {
     timerSeconds = 60;
     timerInterval = setInterval(() => {
-        timerSeconds--; // Decrease the timer
-        updateTimerDisplay();
+        if (!gameEnded) {
+            timerSeconds--;
+            updateTimerDisplay();
 
-        if (timerSeconds <= 0) {
-            showGameOver();
+            if (timerSeconds <= 0) {
+                showGameOver(); // End the game if time runs out
+            }
         }
-    }, 1000);
+    }, 1000); // Update every second
 };
 
 const init = async() => {
@@ -230,23 +238,26 @@ const init = async() => {
         renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
+    // Handle key presses and releases
     window.addEventListener('keydown', (e) => {
-        keysPressed[e.key] = true;
+        if (!gameEnded) keysPressed[e.key] = true; // Check if the game is over
     });
 
     window.addEventListener('keyup', (e) => {
         keysPressed[e.key] = false;
     });
 
+    // Main render loop
     const renderLoop = () => {
-        updateBallPosition();
-        checkCollision(); // Check for collisions with toys
+        if (!gameEnded) {
+            updateBallPosition(); // Update the ball's position
+            checkCollision(); // Check for collisions with toys
+        }
         renderer.render(scene, camera);
-        requestAnimationFrame(renderLoop);
+        requestAnimationFrame(renderLoop); // Continue the loop
     };
 
-
-    renderLoop();
+    renderLoop(); // Start the game loop
 };
 
 // Start the game

@@ -135,6 +135,7 @@ const updateTimerDisplay = () => {
 
 // Function to show the game over title
 const showGameOver = () => {
+    clearInterval(timerInterval);
     if (!gameOverElement) {
         gameOverElement = document.createElement("div");
         gameOverElement.style.position = "absolute";
@@ -157,7 +158,6 @@ const startTimer = () => {
         updateTimerDisplay();
 
         if (timerSeconds <= 0) {
-            clearInterval(timerInterval);
             showGameOver();
         }
     }, 1000);

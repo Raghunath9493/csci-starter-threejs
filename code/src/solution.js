@@ -10,6 +10,7 @@ const cameraOffset = new THREE.Vector3(0, 15, 10); // Offset to maintain camera 
 let toys = []; // To keep track of the toys in the scene
 let timerElement; // To display the timer
 let toyCountElement; // To display the toy count
+let gameOverElement; // To display the game over title
 let timerSeconds = 60; // 60-second timer
 let timerInterval; // For updating the timer
 
@@ -120,12 +121,32 @@ const checkCollision = () => {
             updateToyCountDisplay();
         }
     }
+    if (toys.length === 0) {
+        showGameOver(); // Display Game Over if all toys are collected
+    }
 };
 
 // Function to update the timer
 const updateTimerDisplay = () => {
     if (timerElement) {
         timerElement.textContent = `Time: ${timerSeconds}`; // Display remaining time
+    }
+};
+
+// Function to show the game over title
+const showGameOver = () => {
+    if (!gameOverElement) {
+        gameOverElement = document.createElement("div");
+        gameOverElement.style.position = "absolute";
+        gameOverElement.style.top = "50%";
+        gameOverElement.style.left = "50%";
+        gameOverElement.style.transform = "translate(-50%, -50%)";
+        gameOverElement.style.fontSize = "48px";
+        gameOverElement.style.color = "white";
+        gameOverElement.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+        gameOverElement.style.padding = "20px";
+        gameOverElement.textContent = "Game Over!";
+        document.body.appendChild(gameOverElement);
     }
 };
 
@@ -137,7 +158,7 @@ const startTimer = () => {
 
         if (timerSeconds <= 0) {
             clearInterval(timerInterval);
-            console.log("Game Over! Time's up!");
+            showGameOver();
         }
     }, 1000);
 };
@@ -157,8 +178,6 @@ const init = async() => {
             Soccer_ball.visible = true;
             scene.add(Soccer_ball);
 
-        } else {
-            console.error("Soccer_ball not loaded correctly");
         }
     } catch (error) {
         console.error("Failed to load Soccer_ball:", error);

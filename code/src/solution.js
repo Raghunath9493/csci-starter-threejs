@@ -6,6 +6,7 @@ let keysPressed = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRig
 const ballMoveSpeed = 0.5; // Speed of ball movement
 const ballRotationSpeed = 0.1; // Speed of ball rotation
 const ballPosition = new THREE.Vector3(0, 3, 0);
+const cameraOffset = new THREE.Vector3(0, 5, 10); // Offset to maintain camera position relative to the ball
 let toys = []; // To keep track of the toys in the scene
 
 const getRandomColor = () => {
@@ -94,6 +95,10 @@ const updateBallPosition = () => {
     }
 
     Soccer_ball.position.add(moveVector); // Update the position based on the movement vector
+    // Update camera position based on ball position plus offset
+    camera.position.copy(Soccer_ball.position).add(cameraOffset);
+    camera.lookAt(Soccer_ball.position); // Ensure the camera focuses on the ball
+
 };
 // const updateBallPosition = () => {
 //     const moveVector = new THREE.Vector3(0, 0, 0);
@@ -132,17 +137,16 @@ const init = async() => {
     document.body.appendChild(renderer.domElement);
 
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.5, 1000);
-    camera.position.set(30, 30, 30);
-
+    camera = new THREE.PerspectiveCamera(95, window.innerWidth / window.innerHeight, 0.5, 1000);
+    camera.position.set(10, 10, 10);
     try {
         Soccer_ball = await loadModel('./assets/Soccer_ball/scene.gltf');
         if (Soccer_ball) {
-            Soccer_ball.scale.set(10, 10, 10);
+            Soccer_ball.scale.set(4, 4, 4);
             Soccer_ball.position.copy(ballPosition);
             Soccer_ball.visible = true;
             scene.add(Soccer_ball);
-            camera.lookAt(Soccer_ball.position);
+
         } else {
             console.error("Soccer_ball not loaded correctly");
         }
@@ -158,7 +162,7 @@ const init = async() => {
     grassTexture.wrapT = THREE.RepeatWrapping;
     grassTexture.repeat.set(100, 100);
 
-    const planeGeometry = new THREE.PlaneGeometry(200, 200);
+    const planeGeometry = new THREE.PlaneGeometry(1000, 1000);
     const planeMaterial = new THREE.MeshBasicMaterial({ map: grassTexture });
     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
     plane.rotateX(-Math.PI / 2);

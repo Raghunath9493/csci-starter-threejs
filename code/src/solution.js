@@ -12,7 +12,7 @@ let toys = []; // To keep track of the toys in the scene
 let timerElement; // To display the timer
 let toyCountElement; // To display the toy count
 let gameOverElement; // To display the game over title
-let timerSeconds = 30; // 60-second timer
+let timerSeconds = 60; // 60-second timer
 let timerInterval; // For updating the timer
 let gameEnded = false; // Game state to check if the game has ended
 
@@ -48,24 +48,6 @@ const startGame = () => {
     startTimer(); // Start the game timer
 };
 
-// Define a function to create the "Start" button
-const createStartButton = () => {
-    startButton = document.createElement("button");
-    startButton.textContent = "Start Game";
-    startButton.style.position = "absolute";
-    startButton.style.top = "50%";
-    startButton.style.left = "50%";
-    startButton.style.transform = "translate(-50%, -50%)";
-    startButton.style.fontSize = "24px";
-    startButton.style.padding = "10px";
-    startButton.style.backgroundColor = "blue";
-    startButton.style.color = "white";
-    startButton.style.border = "none";
-    startButton.style.cursor = "pointer";
-
-    startButton.addEventListener("click", startGame); // Trigger the game when clicked
-    document.body.appendChild(startButton); // Add to the document
-};
 
 // Function to add toys to the scene with random colors
 const addToys = () => {

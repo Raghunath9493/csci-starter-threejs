@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 let renderer, scene, camera, Soccer_ball;
+let startButton;
 let keysPressed = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, s: false, a: false, d: false, q: false, e: false };
 const ballMoveSpeed = 0.5; // Speed of ball movement
 const ballRotationSpeed = 0.1; // Speed of ball rotation
@@ -11,9 +12,17 @@ let toys = []; // To keep track of the toys in the scene
 let timerElement; // To display the timer
 let toyCountElement; // To display the toy count
 let gameOverElement; // To display the game over title
-let timerSeconds = 60; // 60-second timer
+let timerSeconds = 30; // 60-second timer
 let timerInterval; // For updating the timer
 let gameEnded = false; // Game state to check if the game has ended
+
+// Define floor boundaries
+const floorBounds = {
+    minX: -1000,
+    maxX: 1000,
+    minZ: -1000,
+    maxZ: 1000
+};
 
 const getRandomColor = () => {
     return Math.floor(Math.random() * 0xffffff);
@@ -31,7 +40,32 @@ const loadModel = (url) => new Promise((resolve, reject) => {
         }
     );
 });
+// Function to start the game, triggered by the "Start" button
+const startGame = () => {
+    startButton.remove(); // Remove the start button after the game begins
 
+    updateToyCountDisplay(); // Initialize the toy count display
+    startTimer(); // Start the game timer
+};
+
+// Define a function to create the "Start" button
+const createStartButton = () => {
+    startButton = document.createElement("button");
+    startButton.textContent = "Start Game";
+    startButton.style.position = "absolute";
+    startButton.style.top = "50%";
+    startButton.style.left = "50%";
+    startButton.style.transform = "translate(-50%, -50%)";
+    startButton.style.fontSize = "24px";
+    startButton.style.padding = "10px";
+    startButton.style.backgroundColor = "blue";
+    startButton.style.color = "white";
+    startButton.style.border = "none";
+    startButton.style.cursor = "pointer";
+
+    startButton.addEventListener("click", startGame); // Trigger the game when clicked
+    document.body.appendChild(startButton); // Add to the document
+};
 
 // Function to add toys to the scene with random colors
 const addToys = () => {
@@ -98,13 +132,26 @@ const updateBallPosition = () => {
         Soccer_ball.rotation.z += ballRotationSpeed;
     }
 
-    Soccer_ball.position.add(moveVector); // Update the position based on the movement vector
-    // Update camera position based on ball position plus offset
-    updateCameraPosition(); // Keep the camera focused on the ball
-    camera.position.copy(Soccer_ball.position).add(cameraOffset);
-    camera.lookAt(Soccer_ball.position); // Ensure the camera focuses on the ball
+    // Check boundaries before updating position
+    const newPosition = Soccer_ball.position.clone().add(moveVector);
 
+    if (newPosition.x < floorBounds.minX) {
+        newPosition.x = floorBounds.minX; // Constraint on X-axis
+    }
+    if (newPosition.x > floorBounds.maxX) {
+        newPosition.x = floorBounds.maxX; // Constraint on X-axis
+    }
+    if (newPosition.z < floorBounds.minZ) {
+        newPosition.z = floorBounds.minZ; // Constraint on Z-axis
+    }
+    if (newPosition.z > floorBounds.maxZ) {
+        newPosition.z = floorBounds.maxZ; // Constraint on Z-axis
+    }
+
+    Soccer_ball.position.copy(newPosition);
+    updateCameraPosition();
 };
+
 
 const checkCollision = () => {
     const ballBox = new THREE.Box3().setFromObject(Soccer_ball);

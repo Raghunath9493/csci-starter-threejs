@@ -23,7 +23,6 @@ const floorBounds = {
     minZ: -1000,
     maxZ: 1000
 };
-
 const getRandomColor = () => {
     return Math.floor(Math.random() * 0xffffff);
 };
@@ -55,10 +54,11 @@ const addToys = () => {
     const numToys = 10;
     for (let i = 0; i < numToys; i++) {
         const toyMaterial = new THREE.MeshBasicMaterial({ color: getRandomColor() }); // Random color for each toy
-        const toy = new THREE.Mesh(toyGeometry, toyMaterial);
         const posX = Math.random() * 100 - 50;
+        (floorBounds.maxX - floorBounds.minX) + floorBounds.minX;
         const posY = 0.5;
         const posZ = Math.random() * 100 - 50;
+        const toy = new THREE.Mesh(toyGeometry, toyMaterial);
         toy.position.set(posX, posY, posZ);
         scene.add(toy); // Add toy to the scene
         toys.push(toy); // Add to toys array
@@ -79,7 +79,7 @@ const updateCameraPosition = () => {
     camera.lookAt(Soccer_ball.position); // Ensure the camera looks at the ball
 };
 
-//  update ball position 
+// Update ball position
 const updateBallPosition = () => {
     const moveVector = new THREE.Vector3(0, 0, 0);
 
@@ -114,26 +114,20 @@ const updateBallPosition = () => {
         Soccer_ball.rotation.z += ballRotationSpeed;
     }
 
-    // Check boundaries before updating position
+    // Calculate the new position
     const newPosition = Soccer_ball.position.clone().add(moveVector);
 
-    if (newPosition.x < floorBounds.minX) {
-        newPosition.x = floorBounds.minX; // Constraint on X-axis
-    }
-    if (newPosition.x > floorBounds.maxX) {
-        newPosition.x = floorBounds.maxX; // Constraint on X-axis
-    }
-    if (newPosition.z < floorBounds.minZ) {
-        newPosition.z = floorBounds.minZ; // Constraint on Z-axis
-    }
-    if (newPosition.z > floorBounds.maxZ) {
-        newPosition.z = floorBounds.maxZ; // Constraint on Z-axis
+    // Check collision with the plane (grass field)
+    if (newPosition.x < floorBounds.minX || newPosition.x > floorBounds.maxX ||
+        newPosition.z < floorBounds.minZ || newPosition.z > floorBounds.maxZ) {
+        // Ball is trying to move out of bounds, reset its position
+        newPosition.copy(Soccer_ball.position);
     }
 
+    // Update the ball's position
     Soccer_ball.position.copy(newPosition);
     updateCameraPosition();
 };
-
 
 const checkCollision = () => {
     const ballBox = new THREE.Box3().setFromObject(Soccer_ball);

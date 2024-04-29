@@ -3,7 +3,11 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 let renderer, scene, camera, Soccer_ball;
 let startButton;
-let keysPressed = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, s: false, a: false, d: false, q: false, e: false };
+let acceleration = new THREE.Vector3(0, 0, 0); // Initialize acceleration vector
+const keysPressed = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, s: false, a: false, d: false, q: false, e: false };
+// const acceleration = 0.02; // Acceleration of the ball
+const ballDeceleration = 0.08; // Deceleration of the ball when not pressing any keys
+let velocity = new THREE.Vector3(0, 0, 0); // Initial velocity of the ball
 const ballMoveSpeed = 0.5; // Speed of ball movement
 const ballRotationSpeed = 0.1; // Speed of ball rotation
 const ballPosition = new THREE.Vector3(0, 3, 0);
@@ -23,30 +27,94 @@ const floorBounds = {
     minZ: -1000,
     maxZ: 1000
 };
-const getRandomColor = () => {
-    return Math.floor(Math.random() * 0xffffff);
+
+
+// // Start button creation
+// const createStartButton = () => {
+//     const startButton = document.createElement('button');
+//     startButton.textContent = 'Start Game';
+//     startButton.style.position = 'absolute';
+//     startButton.style.top = '50%';
+//     startButton.style.left = '50%';
+//     startButton.style.transform = 'translate(-50%, -50%)';
+//     startButton.style.fontSize = '24px';
+//     startButton.style.padding = '10px 20px';
+//     startButton.style.backgroundColor = '#007bff'; // Blue
+//     startButton.style.color = '#fff'; // White
+//     startButton.style.border = 'none';
+//     startButton.style.cursor = 'pointer';
+
+//     startButton.addEventListener('click', () => {
+//         startButton.style.display = 'none'; // Hide the start button
+//         init(); // Start the game
+//     });
+
+//     document.body.appendChild(startButton); // Add to the body
+// };
+// // Call createStartButton to ensure the button is created
+// createStartButton();
+
+const getRandomColor = () => Math.floor(Math.random() * 0xffffff);
+
+// Function to find the nearest toy and get the direction towards it
+const getDirectionToNearestToy = () => {
+    let nearestToy = null;
+    let minDistance = Infinity;
+    let direction = new THREE.Vector3();
+
+    toys.forEach(toy => {
+        let distance = toy.position.distanceTo(Soccer_ball.position);
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearestToy = toy;
+            direction.subVectors(toy.position, Soccer_ball.position).normalize();
+        }
+    });
+
+    return { nearestToy, direction };
+};
+
+// Function to update or create an arrow pointing to the nearest toy
+const updateDirectionToToy = () => {
+    const { nearestToy, direction } = getDirectionToNearestToy();
+
+    if (nearestToy) {
+        // Check if there's already an arrow helper, update its direction and position
+        if (arrowHelper) {
+            arrowHelper.setDirection(direction);
+            arrowHelper.position.copy(Soccer_ball.position);
+        } else {
+            // Create a new arrow helper if none exists
+            arrowHelper = new THREE.ArrowHelper(direction, Soccer_ball.position, 10, 0xffff00);
+            scene.add(arrowHelper);
+        }
+    } else {
+        // Remove the arrow if no nearest toy is found
+        if (arrowHelper) {
+            scene.remove(arrowHelper);
+            arrowHelper = null;
+        }
+    }
+};
+
+const renderLoop = () => {
+    if (!gameEnded) {
+        updateBallPosition(); // Update the ball's position
+        updateBallMovementTowardToy(); // Optionally steer the ball towards the nearest toy
+        checkCollision(); // Check for collisions with toys
+        updateDirectionToToy(); // Update the direction arrow to the nearest toy
+    }
+    renderer.render(scene, camera);
+    requestAnimationFrame(renderLoop); // Continue the loop
 };
 
 const loadModel = (url) => new Promise((resolve, reject) => {
     const loader = new GLTFLoader();
-    loader.load(
-        url,
-        (gltf) => resolve(gltf.scene),
-        undefined,
-        (error) => {
-            console.error("Error loading model:", error);
-            reject(error);
-        }
-    );
+    loader.load(url, (gltf) => resolve(gltf.scene), undefined, (error) => {
+        console.error("Error loading model:", error);
+        reject(error);
+    });
 });
-// Function to start the game, triggered by the "Start" button
-const startGame = () => {
-    startButton.remove(); // Remove the start button after the game begins
-
-    updateToyCountDisplay(); // Initialize the toy count display
-    startTimer(); // Start the game timer
-};
-
 
 // Function to add toys to the scene with random colors
 const addToys = () => {
@@ -78,27 +146,51 @@ const updateCameraPosition = () => {
     camera.position.lerp(desiredCameraPosition, 0.1); // Smoothly interpolate to the desired position
     camera.lookAt(Soccer_ball.position); // Ensure the camera looks at the ball
 };
+const maxSpeed = 1; // Maximum speed of the ball
 
 // Update ball position
 const updateBallPosition = () => {
-    const moveVector = new THREE.Vector3(0, 0, 0);
-
+    // Reset acceleration at the beginning of each frame
+    acceleration.set(0, 0, 0);
+    let moveVector = new THREE.Vector3(0, 0, 0);
     if (keysPressed.ArrowUp || keysPressed.w) {
-        moveVector.z -= ballMoveSpeed;
+        acceleration.z -= ballMoveSpeed;
         Soccer_ball.rotation.x -= ballRotationSpeed; // Rotate around X-axis
     }
     if (keysPressed.ArrowDown || keysPressed.s) {
-        moveVector.z += ballMoveSpeed;
+        acceleration.z += ballMoveSpeed;
         Soccer_ball.rotation.x += ballRotationSpeed; // Rotate in the opposite direction
     }
     if (keysPressed.ArrowLeft || keysPressed.a) {
-        moveVector.x -= ballMoveSpeed;
+        acceleration.x -= ballMoveSpeed;
         Soccer_ball.rotation.z -= ballRotationSpeed; // Rotate around Z-axis
     }
     if (keysPressed.ArrowRight || keysPressed.d) {
-        moveVector.x += ballMoveSpeed;
+        acceleration.x += ballMoveSpeed;
         Soccer_ball.rotation.z += ballRotationSpeed; // Rotate in the opposite direction
     }
+
+
+    // Apply the acceleration to velocity
+    velocity.add(acceleration);
+
+    // Apply deceleration
+    velocity.multiplyScalar(1 - ballDeceleration);
+
+    // Limit the velocity to the maximum speed
+    velocity.clampLength(0, maxSpeed);
+
+    // Update the position using the velocity vector
+    Soccer_ball.position.add(velocity);
+
+    // Boundary collision checks
+    if (Soccer_ball.position.x < floorBounds.minX || Soccer_ball.position.x > floorBounds.maxX ||
+        Soccer_ball.position.z < floorBounds.minZ || Soccer_ball.position.z > floorBounds.maxZ) {
+        Soccer_ball.position.sub(velocity); // Revert last move if out of bounds
+        velocity.set(0, 0, 0);
+    }
+    updateCameraPosition(); // Update camera to follow the ball
+
 
     // Diagonal movement and rotations
     if (keysPressed.q) {
@@ -122,11 +214,13 @@ const updateBallPosition = () => {
         newPosition.z < floorBounds.minZ || newPosition.z > floorBounds.maxZ) {
         // Ball is trying to move out of bounds, reset its position
         newPosition.copy(Soccer_ball.position);
+        velocity.set(0, 0, 0);
+
     }
 
     // Update the ball's position
     Soccer_ball.position.copy(newPosition);
-    updateCameraPosition();
+    // updateCameraPosition();
 };
 
 const checkCollision = () => {
@@ -197,6 +291,7 @@ const startTimer = () => {
 const init = async() => {
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    // renderer.domElement.style.position = 'relative'; // Ensure correct positioning
     document.body.appendChild(renderer.domElement);
 
     scene = new THREE.Scene();
@@ -213,9 +308,9 @@ const init = async() => {
     } catch (error) {
         console.error("Failed to load Soccer_ball:", error);
     }
-
-    addToys();
     startTimer(); // Start the game timer
+    addToys();
+
 
     // Create a text element for the timer and toy count
     timerElement = document.createElement('div');
@@ -248,7 +343,7 @@ const init = async() => {
     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
     plane.rotateX(-Math.PI / 2);
     // Adjust the angle by modifying the rotation values
-    plane.rotateZ(Math.PI / 4); // Example rotation to create a slanted angle (tilted to the right)
+    // plane.rotateZ(Math.PI / 4); // Example rotation to create a slanted angle (tilted to the right)
 
     scene.add(plane);
 

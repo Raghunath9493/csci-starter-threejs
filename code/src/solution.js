@@ -22,10 +22,10 @@ let gameEnded = false; // Game state to check if the game has ended
 
 // Define floor boundaries
 const floorBounds = {
-    minX: -1000,
-    maxX: 1000,
-    minZ: -1000,
-    maxZ: 1000
+    minX: -500, // Left boundary
+    maxX: 500, // Right boundary
+    minZ: -500, // Back boundary
+    maxZ: 500 // Front boundary
 };
 
 
@@ -165,13 +165,30 @@ const updateBallPosition = () => {
     // Update the position using the velocity vector
     Soccer_ball.position.add(velocity);
 
+    // Calculate potential new position
+    let newPos = new THREE.Vector3().addVectors(Soccer_ball.position, velocity);
+
+    // Enforce boundaries
+    newPos.x = THREE.MathUtils.clamp(newPos.x, floorBounds.minX, floorBounds.maxX);
+    newPos.z = THREE.MathUtils.clamp(newPos.z, floorBounds.minZ, floorBounds.maxZ);
+
+    // Update the ball's position
+    Soccer_ball.position.copy(newPos);
+    // Check boundaries and adjust the position and velocity if needed
+    if (newPos.x < floorBounds.minX || newPos.x === floorBounds.minX) {
+        velocity.x = 0; // Stop horizontal movement
+    }
+
+    if (newPos.z < floorBounds.minZ || newPos.z === floorBounds.minZ) {
+        velocity.z = 0; // Stop forward/backward movement
+    }
+
     // Boundary collision checks
     if (Soccer_ball.position.x < floorBounds.minX || Soccer_ball.position.x > floorBounds.maxX ||
         Soccer_ball.position.z < floorBounds.minZ || Soccer_ball.position.z > floorBounds.maxZ) {
         Soccer_ball.position.sub(velocity); // Revert last move if out of bounds
         velocity.set(0, 0, 0);
     }
-    updateCameraPosition(); // Update camera to follow the ball
 
 
     // Diagonal movement and rotations
@@ -202,7 +219,7 @@ const updateBallPosition = () => {
 
     // Update the ball's position
     Soccer_ball.position.copy(newPosition);
-    // updateCameraPosition();
+    updateCameraPosition();
 };
 
 const checkCollision = () => {

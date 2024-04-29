@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 let renderer, scene, camera, Soccer_ball;
-let startButton;
+let arrowHelper; // Declare arrowHelper globally if not already done
 let acceleration = new THREE.Vector3(0, 0, 0); // Initialize acceleration vector
 const keysPressed = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, s: false, a: false, d: false, q: false, e: false };
 // const acceleration = 0.02; // Acceleration of the ball
@@ -29,31 +29,6 @@ const floorBounds = {
 };
 
 
-// // Start button creation
-// const createStartButton = () => {
-//     const startButton = document.createElement('button');
-//     startButton.textContent = 'Start Game';
-//     startButton.style.position = 'absolute';
-//     startButton.style.top = '50%';
-//     startButton.style.left = '50%';
-//     startButton.style.transform = 'translate(-50%, -50%)';
-//     startButton.style.fontSize = '24px';
-//     startButton.style.padding = '10px 20px';
-//     startButton.style.backgroundColor = '#007bff'; // Blue
-//     startButton.style.color = '#fff'; // White
-//     startButton.style.border = 'none';
-//     startButton.style.cursor = 'pointer';
-
-//     startButton.addEventListener('click', () => {
-//         startButton.style.display = 'none'; // Hide the start button
-//         init(); // Start the game
-//     });
-
-//     document.body.appendChild(startButton); // Add to the body
-// };
-// // Call createStartButton to ensure the button is created
-// createStartButton();
-
 const getRandomColor = () => Math.floor(Math.random() * 0xffffff);
 
 // Function to find the nearest toy and get the direction towards it
@@ -72,41 +47,48 @@ const getDirectionToNearestToy = () => {
     });
 
     return { nearestToy, direction };
-};
+}
 
 // Function to update or create an arrow pointing to the nearest toy
 const updateDirectionToToy = () => {
     const { nearestToy, direction } = getDirectionToNearestToy();
 
+    console.log("Nearest Toy:", nearestToy); // Debug log
+    console.log("Direction:", direction); // Debug log
+
     if (nearestToy) {
-        // Check if there's already an arrow helper, update its direction and position
         if (arrowHelper) {
             arrowHelper.setDirection(direction);
             arrowHelper.position.copy(Soccer_ball.position);
+            console.log("Arrow updated"); // Debug log
         } else {
-            // Create a new arrow helper if none exists
             arrowHelper = new THREE.ArrowHelper(direction, Soccer_ball.position, 10, 0xffff00);
             scene.add(arrowHelper);
+            console.log("Arrow created"); // Debug log
         }
     } else {
-        // Remove the arrow if no nearest toy is found
         if (arrowHelper) {
             scene.remove(arrowHelper);
             arrowHelper = null;
+            console.log("Arrow removed"); // Debug log
         }
     }
 };
 
+// Ensure this function is called in your render or update loop
+
+
+// Main render loop
 const renderLoop = () => {
     if (!gameEnded) {
-        updateBallPosition(); // Update the ball's position
-        updateBallMovementTowardToy(); // Optionally steer the ball towards the nearest toy
-        checkCollision(); // Check for collisions with toys
-        updateDirectionToToy(); // Update the direction arrow to the nearest toy
+        updateBallPosition();
+        checkCollision();
+        updateDirectionToToy(); // Ensure this is being called
     }
     renderer.render(scene, camera);
-    requestAnimationFrame(renderLoop); // Continue the loop
+    requestAnimationFrame(renderLoop);
 };
+
 
 const loadModel = (url) => new Promise((resolve, reject) => {
     const loader = new GLTFLoader();
@@ -375,8 +357,9 @@ const init = async() => {
         requestAnimationFrame(renderLoop); // Continue the loop
     };
 
-    renderLoop(); // Start the game loop
 };
 
 // Start the game
-init();
+init().then(() => {;
+    renderLoop(); // Start the game loop
+});

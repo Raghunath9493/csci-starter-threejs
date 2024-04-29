@@ -53,14 +53,14 @@ const getDirectionToNearestToy = () => {
 const updateDirectionToToy = () => {
     const { nearestToy, direction } = getDirectionToNearestToy();
 
-    console.log("Nearest Toy:", nearestToy); // Debug log
-    console.log("Direction:", direction); // Debug log
+    // console.log("Nearest Toy:", nearestToy); // Debug log
+    // console.log("Direction:", direction); // Debug log
 
     if (nearestToy) {
         if (arrowHelper) {
             arrowHelper.setDirection(direction);
             arrowHelper.position.copy(Soccer_ball.position);
-            console.log("Arrow updated"); // Debug log
+            // console.log("Arrow updated"); // Debug log
         } else {
             arrowHelper = new THREE.ArrowHelper(direction, Soccer_ball.position, 10, 0xffff00);
             scene.add(arrowHelper);
@@ -128,7 +128,7 @@ const updateCameraPosition = () => {
     camera.position.lerp(desiredCameraPosition, 0.1); // Smoothly interpolate to the desired position
     camera.lookAt(Soccer_ball.position); // Ensure the camera looks at the ball
 };
-const maxSpeed = 1; // Maximum speed of the ball
+const maxSpeed = 0.4; // Maximum speed of the ball
 
 // Update ball position
 const updateBallPosition = () => {

@@ -120,10 +120,16 @@ const addToys = () => {
     const numToys = 100;
     for (let i = 0; i < numToys; i++) {
         const toyMaterial = new THREE.MeshBasicMaterial({ color: getRandomColor() }); // Random color for each toy
-        const posX = Math.random() * 1000 - 200;
-        (floorBounds.maxX - floorBounds.minX) + floorBounds.minX;
-        const posY = 0.5;
-        const posZ = Math.random() * 1000 - 200;
+        // const posX = Math.random() * 1000 - 200;
+        // (floorBounds.maxX - floorBounds.minX) + floorBounds.minX;
+        // const posY = 0.5;
+        // const posZ = Math.random() * 1000 - 200;
+        // (floorBounds.maxZ - floorBounds.minZ) + floorBounds.minZ;
+        // const toy = new THREE.Mesh(toyGeometry, toyMaterial);
+        // Random position within the boundaries
+        const posX = Math.random() * (floorBounds.maxX - floorBounds.minX - 2) + floorBounds.minX + 1; // Subtract 2 and add 1 to keep within boundaries and avoid boundary overlap
+        const posZ = Math.random() * (floorBounds.maxZ - floorBounds.minZ - 2) + floorBounds.minZ + 1; // Subtract 2 and add 1 to keep within boundaries and avoid boundary overlap
+        const posY = 0.5; // Adjust posY to ensure toys are on the surface
         const toy = new THREE.Mesh(toyGeometry, toyMaterial);
         toy.position.set(posX, posY, posZ);
         scene.add(toy); // Add toy to the scene
@@ -223,17 +229,21 @@ const checkCollision = () => {
     const ballBox = new THREE.Box3().setFromObject(Soccer_ball);
     for (let i = toys.length - 1; i >= 0; i--) {
         const toyBox = new THREE.Box3().setFromObject(toys[i]);
-        if (ballBox.intersectsBox(toyBox)) {
+        if (ballBox.intersectsBox(toyBox)) { // If collision occurs
             scene.remove(toys[i]); // Remove toy from scene
             toys.splice(i, 1); // Remove from toys array
+            timerSeconds += 1; // Increase the timer by one second per toy collected
             updateToyCountDisplay(); // Update the toy count display immediately
+            updateTimerDisplay(); // Update the timer display
         }
     }
+
     if (toys.length === 0) {
         gameEnded = true; // End the game
         showGameOver();
     }
 };
+
 // Function to update the timer
 const updateTimerDisplay = () => {
     if (timerElement) {
@@ -397,13 +407,15 @@ const init = async() => {
     // Main render loop
     const renderLoop = () => {
         if (!gameEnded) {
-            updateBallPosition(); // Update the ball's position
-            checkCollision(); // Check for collisions with toys
+            updateBallPosition();
+            checkCollision();
+            updateDirectionToToy();
         }
         renderer.render(scene, camera);
-        requestAnimationFrame(renderLoop); // Continue the loop
+        requestAnimationFrame(renderLoop);
     };
-
+    setupEventListeners();
+    renderLoop(); // Start the game loop
 };
 
 

@@ -409,7 +409,7 @@ const init = async() => {
     const startBackgroundMusic = async() => {
         try {
             await playBackgroundMusic('./assets/Audio/Crazy_Frog.mp3');
-            console.log("Background music started.");
+            // console.log("Background music started.");
         } catch (error) {
             console.error("Error starting background music:", error);
         }
@@ -448,8 +448,8 @@ const init = async() => {
     // Initial call to start music with interaction
     document.body.addEventListener('click', startBackgroundMusic, { once: true });
 
-    // Start playing background music
-    await playBackgroundMusic('./assets/Audio/Crazy_Frog.mp3');
+    // // Start playing background music
+    // await playBackgroundMusic('./assets/Audio/Crazy_Frog.mp3');
 
     // Main render loop
     const renderLoop = () => {

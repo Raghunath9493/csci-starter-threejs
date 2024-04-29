@@ -19,6 +19,48 @@ let gameOverElement; // To display the game over title
 let timerSeconds = 60; // 60-second timer
 let timerInterval; // For updating the timer
 let gameEnded = false; // Game state to check if the game has ended
+let backgroundMusicSource; // Declare this globally or in a broader scope
+
+// Declare audioContext globally
+const audioContext = new(window.AudioContext || window.webkitAudioContext)();
+
+// Start background music function
+const playBackgroundMusic = async(url) => {
+    try {
+        const musicBuffer = await loadSound(url);
+        if (musicBuffer) {
+            const source = audioContext.createBufferSource();
+            source.buffer = musicBuffer;
+            source.loop = true;
+            source.connect(audioContext.destination);
+            source.start(0);
+            backgroundMusicSource = source;
+        }
+    } catch (error) {
+        console.error("Failed to play background music:", error);
+    }
+};
+
+// Function to load sound files
+const loadSound = async(url) => {
+    try {
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        return audioContext.decodeAudioData(arrayBuffer);
+    } catch (error) {
+        console.error("Failed to load sound:", error);
+        return null;
+    }
+};
+
+// Function to stop background music
+const stopBackgroundMusic = () => {
+    if (backgroundMusicSource) {
+        backgroundMusicSource.stop();
+        backgroundMusicSource = null;
+    }
+};
+
 
 // Define floor boundaries
 const floorBounds = {
@@ -52,30 +94,22 @@ const getDirectionToNearestToy = () => {
 // Function to update or create an arrow pointing to the nearest toy
 const updateDirectionToToy = () => {
     const { nearestToy, direction } = getDirectionToNearestToy();
-
-    // console.log("Nearest Toy:", nearestToy); // Debug log
-    // console.log("Direction:", direction); // Debug log
-
     if (nearestToy) {
         if (arrowHelper) {
             arrowHelper.setDirection(direction);
             arrowHelper.position.copy(Soccer_ball.position);
-            // console.log("Arrow updated"); // Debug log
         } else {
             arrowHelper = new THREE.ArrowHelper(direction, Soccer_ball.position, 10, 0xffff00);
             scene.add(arrowHelper);
-            console.log("Arrow created"); // Debug log
         }
+
     } else {
         if (arrowHelper) {
             scene.remove(arrowHelper);
             arrowHelper = null;
-            console.log("Arrow removed"); // Debug log
         }
     }
 };
-
-// Ensure this function is called in your render or update loop
 
 
 // Main render loop
@@ -114,7 +148,6 @@ const addToys = () => {
         toys.push(toy); // Add to toys array
     }
 };
-
 const updateToyCountDisplay = () => {
     if (toyCountElement) {
         toyCountElement.textContent = `Toys Left: ${toys.length}`; // Display the number of toys left
@@ -220,32 +253,26 @@ const updateBallPosition = () => {
     // Update the ball's position
     Soccer_ball.position.copy(newPosition);
     updateCameraPosition();
+
 };
 
+// After a toy is collected and removed
 const checkCollision = () => {
     const ballBox = new THREE.Box3().setFromObject(Soccer_ball);
     for (let i = toys.length - 1; i >= 0; i--) {
         const toyBox = new THREE.Box3().setFromObject(toys[i]);
-        if (ballBox.intersectsBox(toyBox)) { // If collision occurs
-            const toyColor = toys[i].material.color.getHex(); // Get toy's color
-            Soccer_ball.traverse((child) => {
-                if (child.isMesh) {
-                    child.material.color.set(toyColor); // Change ball's color
-                }
-            });
+        if (ballBox.intersectsBox(toyBox)) {
             scene.remove(toys[i]); // Remove toy from scene
             toys.splice(i, 1); // Remove from toys array
-            updateToyCountDisplay();
+            updateToyCountDisplay(); // Update the toy count display immediately
         }
     }
 
-    // Check if all toys are collected
     if (toys.length === 0) {
         gameEnded = true; // End the game
         showGameOver();
     }
 };
-
 
 // Function to update the timer
 const updateTimerDisplay = () => {
@@ -258,6 +285,7 @@ const updateTimerDisplay = () => {
 const showGameOver = () => {
     clearInterval(timerInterval);
     gameEnded = true; // Set the game ended flag
+    stopBackgroundMusic(); // Stop the background music
     if (!gameOverElement) {
         gameOverElement = document.createElement("div");
         gameOverElement.style.position = "absolute";
@@ -310,7 +338,6 @@ const init = async() => {
     startTimer(); // Start the game timer
     addToys();
 
-
     // Create a text element for the timer and toy count
     timerElement = document.createElement('div');
     timerElement.style.position = 'absolute';
@@ -328,7 +355,9 @@ const init = async() => {
     toyCountElement.style.color = 'white';
     document.body.appendChild(toyCountElement);
 
-    updateToyCountDisplay(); // Initialize the toy count display
+    // Initialize the toy count display
+    updateToyCountDisplay();
+
 
 
     const textureLoader = new THREE.TextureLoader();
@@ -364,6 +393,64 @@ const init = async() => {
         keysPressed[e.key] = false;
     });
 
+    // Check if audioContext is in suspended state (this typically happens in browsers like Chrome)
+    if (audioContext.state === 'suspended') {
+        // Add an event listener to the document that resumes the audioContext when the user interacts with the page
+        document.addEventListener('click', function() {
+            audioContext.resume().then(() => {
+                console.log('Playback resumed successfully');
+            });
+        }, {
+            once: true // Use the listener once
+        });
+    }
+
+    // Function to start playing background music when user interacts
+    const startBackgroundMusic = async() => {
+        try {
+            await playBackgroundMusic('./assets/Audio/Crazy_Frog.mp3');
+            console.log("Background music started.");
+        } catch (error) {
+            console.error("Error starting background music:", error);
+        }
+    };
+    const setupScene = () => {
+        const textureLoader = new THREE.TextureLoader();
+        const grassTexture = textureLoader.load('./assets/Grass.jpg');
+        grassTexture.wrapS = THREE.RepeatWrapping;
+        grassTexture.wrapT = THREE.RepeatWrapping;
+        grassTexture.repeat.set(100, 100);
+        const planeGeometry = new THREE.PlaneGeometry(1000, 1000);
+        const planeMaterial = new THREE.MeshBasicMaterial({ map: grassTexture });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.rotateX(-Math.PI / 2);
+        scene.add(plane);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 10);
+        scene.add(directionalLight);
+    };
+
+    const setupEventListeners = () => {
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        document.body.addEventListener('keydown', (e) => {
+            if (!gameEnded) keysPressed[e.key] = true;
+        });
+        document.body.addEventListener('keyup', (e) => {
+            keysPressed[e.key] = false;
+        });
+    };
+
+    setupScene();
+
+    // Initial call to start music with interaction
+    document.body.addEventListener('click', startBackgroundMusic, { once: true });
+
+    // Start playing background music
+    await playBackgroundMusic('./assets/Audio/Crazy_Frog.mp3');
+
     // Main render loop
     const renderLoop = () => {
         if (!gameEnded) {
@@ -375,6 +462,7 @@ const init = async() => {
     };
 
 };
+
 
 // Start the game
 init().then(() => {;

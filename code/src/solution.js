@@ -16,10 +16,16 @@ let toys = []; // To keep track of the toys in the scene
 let timerElement; // To display the timer
 let toyCountElement; // To display the toy count
 let gameOverElement; // To display the game over title
-let timerSeconds = 60; // 60-second timer
+let timerSeconds = 150; // 150-second timer
 let timerInterval; // For updating the timer
 let gameEnded = false; // Game state to check if the game has ended
 let backgroundMusicSource; // Declare this globally or in a broader scope
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    createStartButton();
+});
+
 // Declare audioContext globally
 const audioContext = new(window.AudioContext || window.webkitAudioContext)();
 // Start background music function
@@ -133,7 +139,7 @@ const addToys = () => {
 
 const updateToyCountDisplay = () => {
     if (toyCountElement) {
-        toyCountElement.textContent = `Toys Left: ${toys.length}`; // Display the number of toys left
+        toyCountElement.textContent = `Toys Left:${toys.length}`; // Display the number of toys left
     }
 };
 // Function to maintain a consistent camera distance
@@ -233,7 +239,9 @@ const checkCollision = () => {
             });
             scene.remove(toys[i]); // Remove toy from scene
             toys.splice(i, 1); // Remove from toys array
+            timerSeconds += 1; // Increment timer by one second for each toy collected
             updateToyCountDisplay();
+            updateTimerDisplay(); // Update the UI for the timer
         }
     }
     if (toys.length === 0) {
@@ -245,7 +253,7 @@ const checkCollision = () => {
 // Function to update the timer
 const updateTimerDisplay = () => {
     if (timerElement) {
-        timerElement.textContent = `Time: ${timerSeconds}`; // Display remaining time
+        timerElement.textContent = `Time:${timerSeconds}`; // Display remaining time
     }
 };
 
@@ -269,12 +277,11 @@ const showGameOver = () => {
     }
 };
 const startTimer = () => {
-    timerSeconds = 100;
+    timerSeconds = 150;
     timerInterval = setInterval(() => {
-        if (!gameEnded) {
+        if (timerSeconds > 0 && !gameEnded) {
             timerSeconds--;
             updateTimerDisplay();
-
             if (timerSeconds <= 0) {
                 showGameOver(); // End the game if time runs out
             }
@@ -363,6 +370,7 @@ const init = async() => {
             once: true // Use the listener once
         });
     }
+
 
     // Function to start playing background music when user interacts
     const startBackgroundMusic = async() => {

@@ -114,28 +114,23 @@ const loadModel = (url) => new Promise((resolve, reject) => {
         reject(error);
     });
 });
+
 // Function to add toys to the scene with random colors
 const addToys = () => {
     const toyGeometry = new THREE.BoxGeometry(2, 2, 2);
-    const numToys = 100;
+    const numToys = 100; // Total number of toys
     for (let i = 0; i < numToys; i++) {
-        const toyMaterial = new THREE.MeshBasicMaterial({ color: getRandomColor() }); // Random color for each toy
-        // const posX = Math.random() * 1000 - 200;
-        // (floorBounds.maxX - floorBounds.minX) + floorBounds.minX;
-        // const posY = 0.5;
-        // const posZ = Math.random() * 1000 - 200;
-        // (floorBounds.maxZ - floorBounds.minZ) + floorBounds.minZ;
-        // const toy = new THREE.Mesh(toyGeometry, toyMaterial);
-        // Random position within the boundaries
-        const posX = Math.random() * (floorBounds.maxX - floorBounds.minX - 2) + floorBounds.minX + 1; // Subtract 2 and add 1 to keep within boundaries and avoid boundary overlap
-        const posZ = Math.random() * (floorBounds.maxZ - floorBounds.minZ - 2) + floorBounds.minZ + 1; // Subtract 2 and add 1 to keep within boundaries and avoid boundary overlap
-        const posY = 0.5; // Adjust posY to ensure toys are on the surface
+        const toyMaterial = new THREE.MeshBasicMaterial({ color: getRandomColor() });
+        const posX = Math.random() * (floorBounds.maxX - floorBounds.minX - 2) + floorBounds.minX + 1;
+        const posZ = Math.random() * (floorBounds.maxZ - floorBounds.minZ - 2) + floorBounds.minZ + 1;
+        const posY = 0.5; // Assuming toys rest at ground level
         const toy = new THREE.Mesh(toyGeometry, toyMaterial);
         toy.position.set(posX, posY, posZ);
-        scene.add(toy); // Add toy to the scene
-        toys.push(toy); // Add to toys array
+        scene.add(toy);
+        toys.push(toy);
     }
 };
+
 const updateToyCountDisplay = () => {
     if (toyCountElement) {
         toyCountElement.textContent = `Toys Left: ${toys.length}`; // Display the number of toys left
@@ -230,16 +225,19 @@ const checkCollision = () => {
     for (let i = toys.length - 1; i >= 0; i--) {
         const toyBox = new THREE.Box3().setFromObject(toys[i]);
         if (ballBox.intersectsBox(toyBox)) { // If collision occurs
+            const toyColor = toys[i].material.color.getHex(); // Get toy's color
+            Soccer_ball.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.color.set(toyColor); // Change ball's color
+                }
+            });
             scene.remove(toys[i]); // Remove toy from scene
             toys.splice(i, 1); // Remove from toys array
-            timerSeconds += 1; // Increase the timer by one second per toy collected
-            updateToyCountDisplay(); // Update the toy count display immediately
-            updateTimerDisplay(); // Update the timer display
+            updateToyCountDisplay();
         }
     }
-
     if (toys.length === 0) {
-        gameEnded = true; // End the game
+        gameEnded = true;
         showGameOver();
     }
 };
@@ -250,6 +248,7 @@ const updateTimerDisplay = () => {
         timerElement.textContent = `Time: ${timerSeconds}`; // Display remaining time
     }
 };
+
 // Function to show the game over title
 const showGameOver = () => {
     clearInterval(timerInterval);
@@ -297,6 +296,7 @@ const init = async() => {
             Soccer_ball.scale.set(4, 4, 4);
             Soccer_ball.position.copy(ballPosition);
             Soccer_ball.visible = true;
+            Soccer_ball.material = new THREE.MeshPhongMaterial({ color: 0xffffff }); // Ensure there's a material that can change color
             scene.add(Soccer_ball);
 
         }

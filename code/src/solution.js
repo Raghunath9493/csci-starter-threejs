@@ -63,6 +63,38 @@ const playBackgroundMusic = async(url) => {
         console.error("Failed to play background music:", error);
     }
 };
+
+// Load the Arrow GLTF model for the arrow
+// Function to load the Arrow model and add it to the scene
+// Function to load the Arrow GLTF model for the arrow
+async function loadArrowModel() {
+    const loader = new GLTFLoader();
+    try {
+        const arrowModel = await new Promise((resolve, reject) => {
+            loader.load('./assets/Arrow/scene.gltf', (gltf) => { // Ensure path is correct
+                resolve(gltf.scene);
+            }, undefined, (error) => {
+                console.error("Error loading arrow model:", error);
+                reject(error);
+            });
+        });
+
+        // If there's an existing arrowHelper, remove it first
+        if (arrowHelper) {
+            scene.remove(arrowHelper);
+        }
+
+        // Assuming the arrow model's correct mesh or adjustment might be needed based on actual model structure
+        arrowModel.scale.set(10, 10, 10); // Scale as necessary
+        arrowModel.position.copy(Soccer_ball.position); // Position it based on your game logic
+
+        arrowHelper = arrowModel; // Update the global arrowHelper reference
+        scene.add(arrowHelper); // Add the new arrow model to the scene
+    } catch (error) {
+        console.error("Failed to load arrow model:", error);
+    }
+}
+
 // Function to load sound files
 const loadSound = async(url) => {
     try {
@@ -111,64 +143,104 @@ const floorBounds = {
 const getRandomColor = () => Math.floor(Math.random() * 0xffffff);
 // Function to find the nearest toy and get the direction towards it
 const getDirectionToNearestToy = () => {
-        let nearestToy = null;
-        let minDistance = Infinity;
-        let direction = new THREE.Vector3();
-        toys.forEach(toy => {
-            let distance = toy.position.distanceTo(Soccer_ball.position);
-            if (distance < minDistance) {
-                minDistance = distance;
-                nearestToy = toy;
-                direction.subVectors(toy.position, Soccer_ball.position).normalize();
-            }
+    let nearestToy = null;
+    let minDistance = Infinity;
+    let direction = new THREE.Vector3();
+    toys.forEach(toy => {
+        let distance = toy.position.distanceTo(Soccer_ball.position);
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearestToy = toy;
+            direction.subVectors(toy.position, Soccer_ball.position).normalize();
+        }
+    });
+    return { nearestToy, direction };
+}
+
+
+// // Function to load GLTF model
+// Function to load a GLTF model from a URL
+async function loadModel(url) {
+    const loader = new GLTFLoader();
+    return new Promise((resolve, reject) => {
+        loader.load(url, (gltf) => {
+            resolve(gltf.scene);
+        }, undefined, (error) => {
+            console.error("Error loading model:", error);
+            reject(error);
         });
-        return { nearestToy, direction };
-    }
-    // Function to update or create an arrow pointing to the nearest toy
-    // Function to update or create an arrow pointing to the nearest toy
+    });
+}
+
+
+// // Function to load the GLTF model for the arrow
+// const loadArrowModel = async() => {
+//     try {
+//         const loader = new GLTFLoader();
+//         const arrowModel = await new Promise((resolve, reject) => {
+//             loader.load('./assets/Arrow', (gltf) => {
+//                 resolve(gltf.scene);
+//             }, undefined, (error) => {
+//                 console.error("Error loading model:", error);
+//                 reject(error);
+//             });
+//         });
+//         const arrowMesh = arrowModel.children[0];
+//         arrowHelper = new THREE.ArrowHelper(arrowMesh.getWorldDirection(new THREE.Vector3()), Soccer_ball.position, 10, 0xffff00);
+//         scene.add(arrowHelper);
+//     } catch (error) {
+//         console.error("Failed to load arrow model:", error);
+//     }
+// };
+
+// Function to update or create an arrow pointing to the nearest toy
 const updateDirectionToToy = () => {
     const { nearestToy, direction } = getDirectionToNearestToy();
     if (nearestToy) {
         if (arrowHelper) {
+            // Update existing ArrowHelper
             arrowHelper.setDirection(direction);
-            arrowHelper.position.copy(Soccer_ball.position.clone().add(direction.clone().multiplyScalar(8))); // Adjust 10 as needed for arrow length
+            arrowHelper.position.copy(Soccer_ball.position);
         } else {
+            // Create a new ArrowHelper if none exists
             arrowHelper = new THREE.ArrowHelper(direction, Soccer_ball.position, 10, 0xffff00);
             scene.add(arrowHelper);
         }
-        // Calculate distance to the nearest toy
-        const distance = Soccer_ball.position.distanceTo(nearestToy.position);
-        // Create a text element to display the distance
-        if (arrowDistanceElement) {
-            // Update existing arrowDistanceElement
-            const screenPosition = new THREE.Vector3().setFromMatrixPosition(arrowHelper.matrixWorld);
-            const arrowDistance = distance.toFixed(2); // Round distance to two decimal places
-            arrowDistanceElement.textContent = `Nearest Toy: ${arrowDistance}`;
-            // arrowDistanceElement.style.left = `${screenPosition.x}px`;
-
-        } else {
-            // Define arrowDistanceElement if not already defined
-            arrowDistanceElement = document.createElement('div');
-            arrowDistanceElement.style.position = 'absolute';
-            arrowDistanceElement.style.color = 'white';
-            arrowDistanceElement.style.fontSize = '18px';
-            // Set initial position of arrowDistanceElement
-            arrowDistanceElement.style.left = '10px'; // Adjust as needed
-            arrowDistanceElement.style.top = '10px'; // Adjust as needed
-            document.body.appendChild(arrowDistanceElement);
-        }
     } else {
+        // Handle case where no toys are available
         if (arrowHelper) {
             scene.remove(arrowHelper);
             arrowHelper = null;
         }
-        // Remove the text element if there's no nearest toy
+    }
+
+    // Optionally, handle arrow distance display update or removal
+    updateArrowDistanceDisplay(nearestToy, direction);
+};
+
+const updateArrowDistanceDisplay = (nearestToy, direction) => {
+    if (nearestToy) {
+        if (!arrowDistanceElement) {
+            // Create arrowDistanceElement if it does not exist
+            arrowDistanceElement = document.createElement('div');
+            arrowDistanceElement.style.position = 'absolute';
+            arrowDistanceElement.style.color = 'white';
+            arrowDistanceElement.style.fontSize = '18px';
+            arrowDistanceElement.style.left = '10px';
+            arrowDistanceElement.style.top = '10px';
+            document.body.appendChild(arrowDistanceElement);
+        }
+        // Update text content
+        const distance = Soccer_ball.position.distanceTo(nearestToy.position).toFixed(2);
+        arrowDistanceElement.textContent = `Distance to nearest toy: ${distance} meters`;
+    } else {
         if (arrowDistanceElement) {
             document.body.removeChild(arrowDistanceElement);
             arrowDistanceElement = null;
         }
     }
 };
+
 
 // Main render loop
 const renderLoop = () => {
@@ -180,13 +252,6 @@ const renderLoop = () => {
     renderer.render(scene, camera);
     requestAnimationFrame(renderLoop);
 };
-const loadModel = (url) => new Promise((resolve, reject) => {
-    const loader = new GLTFLoader();
-    loader.load(url, (gltf) => resolve(gltf.scene), undefined, (error) => {
-        console.error("Error loading model:", error);
-        reject(error);
-    });
-});
 
 // Function to add toys to the scene with random colors
 const addToys = () => {

@@ -65,34 +65,53 @@ const playBackgroundMusic = async(url) => {
 };
 
 // Load the Arrow GLTF model for the arrow
-// Function to load the Arrow model and add it to the scene
-// Function to load the Arrow GLTF model for the arrow
 async function loadArrowModel() {
     const loader = new GLTFLoader();
-    try {
-        const arrowModel = await new Promise((resolve, reject) => {
-            loader.load('./assets/Arrow/scene.gltf', (gltf) => { // Ensure path is correct
-                resolve(gltf.scene);
-            }, undefined, (error) => {
-                console.error("Error loading arrow model:", error);
-                reject(error);
-            });
-        });
+    loader.load('./assets/Arrow/scene.gltf', (gltf) => {
+        const arrowModel = gltf.scene;
 
-        // If there's an existing arrowHelper, remove it first
+        // Log that the model was loaded
+        console.log("Arrow model loaded", arrowModel);
+
+        // Remove existing arrowHelper if it exists
         if (arrowHelper) {
             scene.remove(arrowHelper);
+            console.log("Removed existing arrow helper from the scene");
         }
 
-        // Assuming the arrow model's correct mesh or adjustment might be needed based on actual model structure
-        arrowModel.scale.set(10, 10, 10); // Scale as necessary
-        arrowModel.position.copy(Soccer_ball.position); // Position it based on your game logic
+        // Adjust scale and position to ensure visibility
+        arrowModel.scale.set(10, 10, 10); // Adjust scale as necessary
+        arrowModel.position.copy(Soccer_ball.position);
+        arrowModel.position.y += 5; // Raise the position so it's visible above the ball
 
-        arrowHelper = arrowModel; // Update the global arrowHelper reference
-        scene.add(arrowHelper); // Add the new arrow model to the scene
-    } catch (error) {
-        console.error("Failed to load arrow model:", error);
-    }
+        // Ensure all meshes have materials with DoubleSide rendering
+        arrowModel.traverse((child) => {
+            if (child.isMesh) {
+                child.material.side = THREE.DoubleSide;
+            }
+        });
+
+        // Adjust scale and position to ensure visibility
+        arrowModel.scale.set(10, 10, 10); // Adjust scale as necessary
+        arrowModel.position.copy(Soccer_ball.position);
+        arrowModel.position.y += 5; // Raise the position so it's visible above the ball
+
+        // Update the global arrowHelper reference
+        arrowHelper = arrowModel;
+        scene.add(arrowHelper);
+        console.log("Added new arrow helper to the scene");
+
+        // Log position and scale to verify
+        console.log(`Arrow position: ${arrowHelper.position}`);
+        console.log(`Arrow scale: ${arrowHelper.scale}`);
+
+    }, (xhr) => {
+        // Provide loading progress
+        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+    }, (error) => {
+        // Log an error if the model could not be loaded
+        console.error("Error loading the arrow model:", error);
+    });
 }
 
 // Function to load sound files

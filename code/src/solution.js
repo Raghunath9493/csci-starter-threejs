@@ -4,23 +4,25 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 let renderer, scene, camera, Soccer_ball;
 let arrowHelper; // Declare arrowHelper globally if not already done
 let acceleration = new THREE.Vector3(0, 0, 0); // Initialize acceleration vector
-const keysPressed = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, s: false, a: false, d: false, q: false, e: false };
-// const acceleration = 0.02; // Acceleration of the ball
-const ballDeceleration = 0.08; // Deceleration of the ball when not pressing any keys
+const keysPressed = { ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false, w: false, s: false, a: false, d: false, q: false, e: false, space: false };
+const accelerationAmount = 0.02; // Amount by which the ball's speed will increase per frame
+const decelerationFactor = 0.98; // Factor by which the velocity decreases per frameconst ballDeceleration = 0.08; // Deceleration of the ball when not pressing any keys
 let velocity = new THREE.Vector3(0, 0, 0); // Initial velocity of the ball
 const ballMoveSpeed = 0.5; // Speed of ball movement
 const ballRotationSpeed = 0.1; // Speed of ball rotation
-const ballPosition = new THREE.Vector3(0, 3, 0);
+const ballRadius = 3; // This is the assumed radius based on your scaling factor
+const ballPosition = new THREE.Vector3(0, ballRadius, 0); // Position it at one radius above the grass
 const cameraOffset = new THREE.Vector3(0, 15, 10); // Offset to maintain camera position relative to the ball
 let toys = []; // To keep track of the toys in the scene
 let timerElement; // To display the timer
 let toyCountElement; // To display the toy count
 let gameOverElement; // To display the game over title
-let timerSeconds = 150; // 150-second timer
+let timerSeconds = 300; // 150-second timer
 let timerInterval; // For updating the timer
 let gameEnded = false; // Game state to check if the game has ended
 let backgroundMusicSource; // Declare this globally or in a broader scope
-
+const gravity = 0.05; // Gravity effect to pull the ball down
+let jumpStrength = 1.5; // Initial strength of the jump
 
 document.addEventListener('DOMContentLoaded', function() {
     createStartButton();
@@ -29,7 +31,23 @@ document.addEventListener('DOMContentLoaded', function() {
 // Declare audioContext globally
 const audioContext = new(window.AudioContext || window.webkitAudioContext)();
 // Start background music function
+
+// Function to initialize or resume the AudioContext safely after user interaction
+function initializeAudioContext() {
+    if (!audioContext) {
+        audioContext = new(window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+            console.log("AudioContext resumed successfully!");
+        }).catch(error => {
+            console.error("Error resuming AudioContext:", error);
+        });
+    }
+}
+// Function to play background music
 const playBackgroundMusic = async(url) => {
+    if (!audioContext) return; // Check if AudioContext is initialized
     try {
         const musicBuffer = await loadSound(url);
         if (musicBuffer) {
@@ -55,6 +73,26 @@ const loadSound = async(url) => {
         return null;
     }
 };
+
+// Create start button and its event handler
+function createStartButton() {
+    const button = document.createElement("button");
+    button.textContent = "Start Game";
+    document.body.appendChild(button);
+    button.addEventListener("click", function() {
+        initializeAudioContext(); // Initialize or resume AudioContext on user interaction
+        startGame();
+    });
+}
+
+async function startGame() {
+    await init();
+    playBackgroundMusic('./assets/Audio/Crazy_Frog.mp3');
+    renderLoop();
+    document.querySelector("button").style.display = "none"; // Assume there's only one button
+}
+
+document.addEventListener('DOMContentLoaded', createStartButton);
 // Function to stop background music
 const stopBackgroundMusic = () => {
     if (backgroundMusicSource) {
@@ -124,7 +162,7 @@ const loadModel = (url) => new Promise((resolve, reject) => {
 // Function to add toys to the scene with random colors
 const addToys = () => {
     const toyGeometry = new THREE.BoxGeometry(2, 2, 2);
-    const numToys = 100; // Total number of toys
+    const numToys = 5; // Total number of toys
     for (let i = 0; i < numToys; i++) {
         const toyMaterial = new THREE.MeshBasicMaterial({ color: getRandomColor() });
         const posX = Math.random() * (floorBounds.maxX - floorBounds.minX - 2) + floorBounds.minX + 1;
@@ -137,9 +175,13 @@ const addToys = () => {
     }
 };
 
+// Function to update the toy count display
 const updateToyCountDisplay = () => {
     if (toyCountElement) {
-        toyCountElement.textContent = `Toys Left:${toys.length}`; // Display the number of toys left
+        toyCountElement.textContent = `Toys Left: ${toys.length}`;
+        if (toys.length === 0) {
+            showCongratulations(); // Check here also to handle any edge cases
+        }
     }
 };
 // Function to maintain a consistent camera distance
@@ -173,12 +215,26 @@ const updateBallPosition = () => {
     }
     // Apply the acceleration to velocity
     velocity.add(acceleration);
-    // Apply deceleration
-    velocity.multiplyScalar(1 - ballDeceleration);
     // Limit the velocity to the maximum speed
     velocity.clampLength(0, maxSpeed);
+    // Apply deceleration
+    velocity.multiplyScalar(decelerationFactor);
+
+    // Clamp the velocity to ensure it doesn't exceed maxSpeed
+    if (velocity.length() > maxSpeed) {
+        velocity.normalize().multiplyScalar(maxSpeed);
+    }
     // Update the position using the velocity vector
     Soccer_ball.position.add(velocity);
+    // Enforce boundary conditions
+    if (Soccer_ball.position.x <= floorBounds.minX || Soccer_ball.position.x >= floorBounds.maxX) {
+        velocity.x = 0;
+        Soccer_ball.position.x = THREE.MathUtils.clamp(Soccer_ball.position.x, floorBounds.minX, floorBounds.maxX);
+    }
+    if (Soccer_ball.position.z <= floorBounds.minZ || Soccer_ball.position.z >= floorBounds.maxZ) {
+        velocity.z = 0;
+        Soccer_ball.position.z = THREE.MathUtils.clamp(Soccer_ball.position.z, floorBounds.minZ, floorBounds.maxZ);
+    }
     // Calculate potential new position
     let newPos = new THREE.Vector3().addVectors(Soccer_ball.position, velocity);
     // Enforce boundaries
@@ -186,6 +242,10 @@ const updateBallPosition = () => {
     newPos.z = THREE.MathUtils.clamp(newPos.z, floorBounds.minZ, floorBounds.maxZ);
     // Update the ball's position
     Soccer_ball.position.copy(newPos);
+
+    // Boundary checks to keep the ball within the field
+    Soccer_ball.position.clamp(new THREE.Vector3(floorBounds.minX, 0, floorBounds.minZ), new THREE.Vector3(floorBounds.maxX, 0, floorBounds.maxZ));
+
     // Check boundaries and adjust the position and velocity if needed
     if (newPos.x < floorBounds.minX || newPos.x === floorBounds.minX) {
         velocity.x = 0; // Stop horizontal movement
@@ -212,6 +272,20 @@ const updateBallPosition = () => {
         Soccer_ball.rotation.x -= ballRotationSpeed;
         Soccer_ball.rotation.z += ballRotationSpeed;
     }
+
+    // Vertical movement logic
+    if (keysPressed.space && Soccer_ball.position.y <= ballRadius + 0.1) { // Allow jump only if the ball is close to or on the ground
+        velocity.y += jumpStrength; // Apply jump strength to velocity
+    }
+
+    // Apply gravity if the ball is above the ground
+    if (Soccer_ball.position.y > ballRadius) {
+        velocity.y -= gravity;
+    } else {
+        Soccer_ball.position.y = ballRadius; // Ensure ball does not go below the grass
+        velocity.y = 0; // Reset vertical velocity when touching the ground
+    }
+
     // Calculate the new position
     const newPosition = Soccer_ball.position.clone().add(moveVector);
     // Check collision with the plane (grass field)
@@ -225,18 +299,47 @@ const updateBallPosition = () => {
     Soccer_ball.position.copy(newPosition);
     updateCameraPosition();
 };
-// After a toy is collected and removed
+
+const showCongratulations = () => {
+    if (!gameOverElement) {
+        gameOverElement = document.createElement("div");
+        gameOverElement.style.position = "absolute";
+        gameOverElement.style.top = "0";
+        gameOverElement.style.left = "0";
+        gameOverElement.style.width = "100%";
+        gameOverElement.style.height = "100%";
+        gameOverElement.style.display = "flex";
+        gameOverElement.style.justifyContent = "center";
+        gameOverElement.style.alignItems = "center";
+        gameOverElement.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+        document.body.appendChild(gameOverElement);
+
+        const winImage = new Image();
+        winImage.src = './assets/cup.gif'; // Update path to your downloaded image
+        winImage.style.width = "50%";
+        winImage.style.height = "auto";
+        winImage.style.borderRadius = "100px";
+        gameOverElement.appendChild(winImage);
+    }
+    stopBackgroundMusic();
+    gameEnded = true;
+}
+
 const checkCollision = () => {
     const ballBox = new THREE.Box3().setFromObject(Soccer_ball);
     for (let i = toys.length - 1; i >= 0; i--) {
         const toyBox = new THREE.Box3().setFromObject(toys[i]);
-        if (ballBox.intersectsBox(toyBox)) { // If collision occurs
+        if (ballBox.intersectsBox(toyBox)) {
             const toyColor = toys[i].material.color.getHex(); // Get toy's color
             Soccer_ball.traverse((child) => {
                 if (child.isMesh) {
                     child.material.color.set(toyColor); // Change ball's color
                 }
             });
+
+            // Call explodeToy() function when collision occurs
+            explodeToy(toys[i]);
+
             scene.remove(toys[i]); // Remove toy from scene
             toys.splice(i, 1); // Remove from toys array
             timerSeconds += 1; // Increment timer by one second for each toy collected
@@ -250,10 +353,59 @@ const checkCollision = () => {
     }
 };
 
-// Function to update the timer
+// Function to create explosion animation for a toy
+const explodeToy = (toy) => {
+    const explosionPieces = []; // Array to hold the toy pieces
+
+    // Create smaller pieces from the toy geometry
+    const toyGeometry = toy.geometry;
+    const toyMaterial = toy.material.clone(); // Clone toy's material
+    const pieceCount = 10; // Number of pieces
+
+    for (let i = 0; i < pieceCount; i++) {
+        // Create a new mesh for each piece
+        const piece = new THREE.Mesh(toyGeometry, toyMaterial);
+
+        // Randomize rotation
+        piece.rotation.set(Math.random() * Math.PI * 2, Math.random() * Math.PI * 2, Math.random() * Math.PI * 2);
+
+        // Randomize scale
+        const scale = Math.random() * 0.5 + 0.5; // Scale between 0.5 and 1
+        piece.scale.set(scale, scale, scale);
+
+        // Add piece to the scene
+        scene.add(piece);
+        explosionPieces.push(piece);
+    }
+
+    // Move pieces away from the original toy's position
+    const explosionForce = 5;
+    explosionPieces.forEach((piece) => {
+        const direction = new THREE.Vector3(
+            Math.random() - 0.5,
+            Math.random() - 0.5,
+            Math.random() - 0.5
+        ).normalize();
+        piece.position.copy(toy.position).addScaledVector(direction, explosionForce);
+    });
+
+    // Remove the original toy from the scene
+    scene.remove(toy);
+
+    // Remove exploded pieces after a delay
+    setTimeout(() => {
+        explosionPieces.forEach((piece) => {
+            scene.remove(piece);
+        });
+    }, 100); // Adjust the delay (in milliseconds) as needed
+};
+
+// Function to update the timer display to show minutes and seconds
 const updateTimerDisplay = () => {
     if (timerElement) {
-        timerElement.textContent = `Time:${timerSeconds}`; // Display remaining time
+        const minutes = Math.floor(timerSeconds / 60);
+        const seconds = timerSeconds % 60;
+        timerElement.textContent = `Time Left: ${minutes}:${seconds.toString().padStart(2, '0')}`; // Format seconds with leading zero
     }
 };
 
@@ -276,14 +428,22 @@ const showGameOver = () => {
         document.body.appendChild(gameOverElement);
     }
 };
+
+
+// Function to start and manage the timer
 const startTimer = () => {
-    timerSeconds = 150;
+    timerSeconds = 180; // Starting time in seconds
     timerInterval = setInterval(() => {
         if (timerSeconds > 0 && !gameEnded) {
             timerSeconds--;
             updateTimerDisplay();
             if (timerSeconds <= 0) {
                 showGameOver(); // End the game if time runs out
+            }
+        } else {
+            clearInterval(timerInterval); // Stop the timer if the game ends
+            if (gameEnded) {
+                showGameOver();
             }
         }
     }, 1000); // Update every second
@@ -325,7 +485,7 @@ const init = async() => {
     toyCountElement = document.createElement('div');
     toyCountElement.style.position = 'absolute';
     toyCountElement.style.top = '10px';
-    toyCountElement.style.right = '100px';
+    toyCountElement.style.right = '170px';
     toyCountElement.style.fontSize = '24px';
     toyCountElement.style.color = 'white';
     document.body.appendChild(toyCountElement);
@@ -409,6 +569,7 @@ const init = async() => {
             keysPressed[e.key] = false;
         });
     };
+    // scene.add(wireframeSphere);
     setupScene();
     // Initial call to start music with interaction
     document.body.addEventListener('click', startBackgroundMusic, { once: true });
@@ -425,8 +586,6 @@ const init = async() => {
     setupEventListeners();
     renderLoop(); // Start the game loop
 };
-
-
 // Start the game
 init().then(() => {;
     renderLoop(); // Start the game loop

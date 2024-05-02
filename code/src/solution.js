@@ -23,6 +23,7 @@ let gameEnded = false; // Game state to check if the game has ended
 let backgroundMusicSource; // Declare this globally or in a broader scope
 const gravity = 0.05; // Gravity effect to pull the ball down
 let jumpStrength = 1.5; // Initial strength of the jump
+let arrowDistanceElement; // Declare arrowDistanceElement globally
 
 document.addEventListener('DOMContentLoaded', function() {
     createStartButton();
@@ -124,23 +125,51 @@ const getDirectionToNearestToy = () => {
         return { nearestToy, direction };
     }
     // Function to update or create an arrow pointing to the nearest toy
+    // Function to update or create an arrow pointing to the nearest toy
 const updateDirectionToToy = () => {
     const { nearestToy, direction } = getDirectionToNearestToy();
     if (nearestToy) {
         if (arrowHelper) {
             arrowHelper.setDirection(direction);
-            arrowHelper.position.copy(Soccer_ball.position);
+            arrowHelper.position.copy(Soccer_ball.position.clone().add(direction.clone().multiplyScalar(8))); // Adjust 10 as needed for arrow length
         } else {
             arrowHelper = new THREE.ArrowHelper(direction, Soccer_ball.position, 10, 0xffff00);
             scene.add(arrowHelper);
+        }
+        // Calculate distance to the nearest toy
+        const distance = Soccer_ball.position.distanceTo(nearestToy.position);
+        // Create a text element to display the distance
+        if (arrowDistanceElement) {
+            // Update existing arrowDistanceElement
+            const screenPosition = new THREE.Vector3().setFromMatrixPosition(arrowHelper.matrixWorld);
+            const arrowDistance = distance.toFixed(2); // Round distance to two decimal places
+            arrowDistanceElement.textContent = `Nearest Toy: ${arrowDistance}`;
+            // arrowDistanceElement.style.left = `${screenPosition.x}px`;
+
+        } else {
+            // Define arrowDistanceElement if not already defined
+            arrowDistanceElement = document.createElement('div');
+            arrowDistanceElement.style.position = 'absolute';
+            arrowDistanceElement.style.color = 'white';
+            arrowDistanceElement.style.fontSize = '18px';
+            // Set initial position of arrowDistanceElement
+            arrowDistanceElement.style.left = '10px'; // Adjust as needed
+            arrowDistanceElement.style.top = '10px'; // Adjust as needed
+            document.body.appendChild(arrowDistanceElement);
         }
     } else {
         if (arrowHelper) {
             scene.remove(arrowHelper);
             arrowHelper = null;
         }
+        // Remove the text element if there's no nearest toy
+        if (arrowDistanceElement) {
+            document.body.removeChild(arrowDistanceElement);
+            arrowDistanceElement = null;
+        }
     }
 };
+
 // Main render loop
 const renderLoop = () => {
     if (!gameEnded) {
@@ -191,7 +220,7 @@ const updateCameraPosition = () => {
     camera.position.lerp(desiredCameraPosition, 0.1); // Smoothly interpolate to the desired position
     camera.lookAt(Soccer_ball.position); // Ensure the camera looks at the ball
 };
-const maxSpeed = 0.4; // Maximum speed of the ball
+const maxSpeed = 0.35; // Maximum speed of the ball
 // Update ball position
 const updateBallPosition = () => {
     // Reset acceleration at the beginning of each frame
